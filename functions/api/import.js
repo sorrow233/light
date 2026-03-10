@@ -8,7 +8,8 @@
  * 3. 前端应用启动时自动处理队列
  */
 
-const FIREBASE_PROJECT_ID = 'flow-7ffad';
+const FIREBASE_PROJECT_ID = 'light-7b409';
+const APP_BASE_URL = 'https://lighta.pages.dev';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -30,7 +31,7 @@ export async function onRequestPost({ request }) {
 
         // 如果没有 userId，直接返回重定向 URL
         if (!userId) {
-            const redirectUrl = `https://flowstudio.catzz.work/inspiration?import_text=${encodeURIComponent(text)}`;
+            const redirectUrl = `${APP_BASE_URL}/inspiration?import_text=${encodeURIComponent(text)}`;
             return new Response(JSON.stringify({
                 success: true,
                 method: 'redirect',
@@ -66,7 +67,7 @@ export async function onRequestPost({ request }) {
             console.error('Firestore write failed:', errorData);
 
             // 如果写入失败（可能是权限或路径问题），回退到重定向方案
-            const redirectUrl = `https://flowstudio.catzz.work/inspiration?import_text=${encodeURIComponent(text)}`;
+            const redirectUrl = `${APP_BASE_URL}/inspiration?import_text=${encodeURIComponent(text)}`;
             return new Response(JSON.stringify({
                 success: true,
                 method: 'redirect',

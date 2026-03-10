@@ -1,14 +1,14 @@
 {
     "name": "light",
     "private": true,
-    "version": "2.7.78",
+    "version": "2.0.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
         "generate:sitemap": "node scripts/generate-sitemap.js",
-        "deploy:main": "npm run generate:sitemap && npm run build && npx wrangler pages deploy dist --project-name flow-studio --branch main --commit-dirty=true --commit-message \"Keep inspiration and data modules only\""
+        "deploy:main": "npm run generate:sitemap && npm run build && npx wrangler pages deploy dist --project-name lighta --branch main --commit-dirty=true --commit-message \"Deploy Lighta with independent Firebase sync and inspiration-only modules\""
     },
     "dependencies": {
         "date-fns": "^4.1.0",

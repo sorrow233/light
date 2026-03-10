@@ -2,9 +2,9 @@ import * as Y from 'yjs';
 import { base64ToUint8Array, getStateChunkDocId } from '../../src/features/sync/syncStateCodec.js';
 import { normalizeIdeaTextForExport } from '../../src/features/lifecycle/components/inspiration/categoryTransferUtils.js';
 
-const FIREBASE_PROJECT_ID = 'flow-7ffad';
-const FIREBASE_WEB_API_KEY = 'AIzaSyA20FrNmdIPE2Sb9r97s7cj2w6MLYgcB_M';
-const DEFAULT_DOC_ID = 'flowstudio_v1';
+const FIREBASE_PROJECT_ID = 'light-7b409';
+const FIREBASE_WEB_API_KEY = 'AIzaSyCrwCk7d5msWwhavu_kni8wpR07Km0GjIQ';
+const DEFAULT_DOC_ID = 'light_v1';
 
 const TODO_MODES = new Set(['all', 'unclassified', 'ai_done', 'ai_high', 'ai_mid', 'self']);
 
@@ -167,9 +167,9 @@ function shouldIncludeByMode(project, mode) {
     return aiAssistClass === mode;
 }
 
-function extractTodoIdeas(allProjects, mode) {
-    return allProjects
-        .filter((project) => (project?.stage || 'inspiration') === 'inspiration')
+function extractTodoIdeas(inspirationItems, mode) {
+    return inspirationItems
+        .filter((project) => (project?.stage || 'inspiration') !== 'archive')
         .filter((project) => (project?.category || 'note') === 'todo')
         .filter((project) => !isCompleted(project))
         .filter((project) => shouldIncludeByMode(project, mode))
@@ -260,7 +260,7 @@ async function loadBase64State({ token, userId, roomId, stateDoc }) {
     return chunks.join('');
 }
 
-function readAllProjectsFromState(base64State) {
+function readInspirationItemsFromState(base64State) {
     if (!base64State || typeof base64State !== 'string') {
         return [];
     }
@@ -273,7 +273,7 @@ function readAllProjectsFromState(base64State) {
     }
 
     Y.applyUpdate(yDoc, update, 'remote');
-    return yDoc.getArray('all_projects').toJSON();
+    return yDoc.getArray('inspiration_items').toJSON();
 }
 
 function buildJsonResponse(body, status = 200) {
@@ -353,8 +353,8 @@ export async function onRequestGet({ request, env }) {
         }
 
         const base64State = await loadBase64State({ token, userId, roomId: docId, stateDoc });
-        const allProjects = readAllProjectsFromState(base64State);
-        const todoIdeas = extractTodoIdeas(allProjects, mode);
+        const inspirationItems = readInspirationItemsFromState(base64State);
+        const todoIdeas = extractTodoIdeas(inspirationItems, mode);
 
         const pagedIdeas = todoIdeas.slice(cursor, cursor + limit);
         const items = pagedIdeas.map((project, index) => formatTodoItem(project, cursor + index));

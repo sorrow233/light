@@ -1,5 +1,5 @@
 const seoConfig = {
-    siteUrl: 'https://flowstudio.catzz.work',
+    siteUrl: 'https://lighta.pages.dev',
     defaultLang: 'zh',
     supportedLangs: ['zh', 'en', 'ja', 'ko'],
     langNames: {
