@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 用户同步数据 - 仅用户本人可读写
+    match /users/{userId}/rooms/{roomId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 待导入队列 - 允许外部 API 写入，用户本人可读写删除
+    match /users/{userId}/pending_imports/{importId} {
+      // 允许任何人创建（用于跨项目 API 导入）
+      allow create: if true;
+      // 只有用户本人可读取和删除
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      // 不允许更新
+      allow update: if false;
+    }
+    
+    // 公共分享命令
+    match /shared_commands/{shareId} {
+      // Anyone can read shared commands
+      allow read: if true;
+      
+      // Only authenticated users can create
+      allow create: if request.auth != null;
+      
+      // Only the author can update/delete their own shares
+      // Exception: Anyone can increment the downloads counter
+      allow update: if request.auth != null && (
+        resource.data.author.uid == request.auth.uid || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloads']))
+      );
+      
+      allow delete: if request.auth != null && resource.data.author.uid == request.auth.uid;
+    }
+  }
+}

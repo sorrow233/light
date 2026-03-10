@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Flow Studio | AI-Native Development Environment</title>
+    <meta name="description"
+        content="Orchestrate your AI development workflow with Flow Studio. From inspiration to deployment." />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- 浅色模式主题色 (Pink) -->
+    <meta name="theme-color" content="#fdf2f8" media="(prefers-color-scheme: light)" />
+    <!-- 深色模式主题色 -->
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+
+    <script>
+        // 临时开关：强制 iOS 以浏览器模式运行，保留所有 standalone 相关代码，后续可一键恢复
+        window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ = true;
+    </script>
+
+    <!-- iOS PWA Configuration -->
+    <!-- 临时设为 no：屏蔽 iOS 独立应用壳，避免从主屏图标进入 standalone -->
+    <meta name="apple-mobile-web-app-capable" content="no" />
+    <meta name="mobile-web-app-capable" content="no" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Flow Studio" />
+
+    <!-- iOS Startup Image - 使用 SVG data URI，覆盖所有设备尺寸 -->
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 320px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 375px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 390px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 414px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 428px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 430px)">
+    <!-- iPad -->
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 768px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 810px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 820px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 834px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 1024px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 1112px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 1194px)">
+    <link rel="apple-touch-startup-image"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%23FFF5F7' width='1' height='1'/%3E%3C/svg%3E"
+        media="(device-width: 1366px)">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Outfit:wght@100..900&family=JetBrains+Mono:wght@100..800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        <style>@media (display-mode: standalone) {
+            /* 移除强制背景色，交给 React 应用控制 */
+        }
+    </style>
+
+</head>
+
+<body>
+    <!-- iOS PWA Splash Screen - 仅在 iOS standalone 模式下显示 -->
+    <div id="splash-screen" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fdf2f8;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    " class="splash-light">
+        <style>
+            @media (prefers-color-scheme: dark) {
+                #splash-screen {
+                    background: #0f172a !important;
+                }
+
+                #splash-text {
+                    color: #f5f5f5 !important;
+                }
+            }
+        </style>
+        <img src="/apple-touch-icon.png" alt="Flow Studio" style="
+            width: 80px;
+            height: 80px;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 40px rgba(244, 114, 182, 0.2);
+            animation: breathe 3s ease-in-out infinite;
+        " />
+        <div id="splash-text" style="
+            color: #EC4899;
+            font-family: 'Outfit', 'Inter', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease-out 0.2s forwards;
+        ">Flow Studio</div>
+        <style>
+            @keyframes breathe {
+
+                0%,
+                100% {
+                    transform: scale(1);
+                    filter: brightness(1);
+                }
+
+                50% {
+                    transform: scale(1.05);
+                    filter: brightness(1.1);
+                }
+            }
+
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+    </div>
+
+    <script>
+        // 仅在 iOS/iPadOS standalone 模式下显示 Splash Screen
+        (function () {
+            var forceBrowserMode = window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ === true;
+            // 检测 iOS/iPadOS（新版 iPadOS 伪装成 Mac，需要特殊检测）
+            var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+
+            // 临时浏览器模式开启时，不执行 standalone 启动动画逻辑
+            if (!forceBrowserMode && isIOS && isStandalone) {
+                var splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.style.display = 'flex';
+
+                    // 等待 React 真正渲染完成，而不仅仅是 load 事件
+                    var minDisplayTime = 600; // 最小展示 600ms
+                    var startTime = Date.now();
+                    var maxWaitTime = 5000; // 最多等待 5 秒
+
+                    function checkReactReady() {
+                        var root = document.getElementById('root');
+                        var isReactReady = root && root.children.length > 0;
+                        var elapsedTime = Date.now() - startTime;
+
+                        if (isReactReady && elapsedTime >= minDisplayTime) {
+                            // React 已渲染且达到最小展示时间，开始退场动画
+                            splash.style.opacity = '0';
+                            splash.style.transform = 'scale(1.1)';
+                            splash.style.pointerEvents = 'none';
+
+                            setTimeout(function () {
+                                splash.style.display = 'none';
+                            }, 600);
+                        } else if (elapsedTime < maxWaitTime) {
+                            // 继续等待
+                            setTimeout(checkReactReady, 50);
+                        } else {
+                            // 超时，强制隐藏
+                            splash.style.opacity = '0';
+                            splash.style.display = 'none';
+                        }
+                    }
+
+                    // 开始检测
+                    checkReactReady();
+                }
+            }
+        })();
+    </script>
+
+    <div id="root"></div>
+
+    <script>
+        (function () {
+            var forceBrowserMode = window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ === true;
+            var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+
+            // 临时浏览器模式开启时，跳过 standalone 白屏恢复逻辑
+            if (!forceBrowserMode && isIOS && isStandalone) {
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') {
+                        // 页面重新可见时，检查是否需要恢复
+                        var root = document.getElementById('root');
+                        if (root && (!root.innerHTML || root.innerHTML.trim() === '')) {
+                            // 如果 root 为空，说明可能出现了白屏，尝试重新加载
+                            window.location.reload();
+                        }
+                    }
+                });
+
+                // 监听 pageshow 事件（从 bfcache 恢复时触发）
+                window.addEventListener('pageshow', function (event) {
+                    if (event.persisted) {
+                        // 从缓存恢复，强制刷新以确保状态正确
+                        window.location.reload();
+                    }
+                });
+            }
+        })();
+    </script>
+
+    <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

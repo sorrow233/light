@@ -1,0 +1,1 @@
+export const MAX_INSPIRATION_CATEGORIES = 30;
