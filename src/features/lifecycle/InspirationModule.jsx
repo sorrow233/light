@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ArrowRight, Lightbulb, Hash, X, Calendar, ListChecks, Sparkles, Copy, Settings2, Trash2 } from 'lucide-react';
+import { ArrowRight, Lightbulb, Hash, X, Calendar, ListChecks, Sparkles, Copy, Trash2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { useSync } from '../sync/SyncContext';
 import { useSyncedProjects } from '../sync/useSyncStore';
 import { useImportQueue } from '../sync/hooks/useImportQueue';
@@ -24,6 +25,7 @@ import {
     normalizeIdeaTextForExport,
     parseCategoryTransferOutput,
 } from './components/inspiration/categoryTransferUtils';
+import { buildCategoryClipboardText } from './components/inspiration/categoryClipboardUtils';
 import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
 
 // Auto color logic: Every 3 items, switch to next color
@@ -42,7 +44,6 @@ const decodeRoutePart = (value) => {
     }
 };
 
-const TODO_AI_HINT_SEEN_KEY = 'light_todo_ai_hint_seen';
 const TODO_AI_CLASS_UNCLASSIFIED = 'unclassified';
 const TODO_AI_FILTER_PENDING = 'pending';
 const TAG_REGEX = /\[([^\]]+)\]/g;
@@ -182,13 +183,6 @@ const InspirationModule = () => {
     const [isCategoryTransferTargetOnly, setIsCategoryTransferTargetOnly] = useState(false);
     const [categoryTransferTargetId, setCategoryTransferTargetId] = useState('note');
     const [aiAssistTab, setAiAssistTab] = useState('prompt');
-    const [showTodoAiHint, setShowTodoAiHint] = useState(() => {
-        try {
-            return localStorage.getItem(TODO_AI_HINT_SEEN_KEY) !== '1';
-        } catch {
-            return true;
-        }
-    });
     const editorRef = useRef(null);
     const textareaRef = useRef(null); // Define textareaRef even if not used widely now
     const imageUploaderRef = useRef(null); // 图片上传组件引用
@@ -983,6 +977,44 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         });
     }, [categoryTransferSourceCategory, categories, categoryTransferNumberedText]);
 
+    const handleCopyCategorySnapshot = useCallback(async (categoryId) => {
+        const targetCategoryId = categoryId || selectedCategory;
+        const targetCategory = categories.find((cat) => cat.id === targetCategoryId) || selectedCategoryConfig;
+        const categoryIdeas = targetCategoryId === selectedCategory
+            ? sortedIdeas
+            : targetCategoryId === 'todo'
+                ? filteredTodoIdeas
+                : [...ideas]
+                    .filter((idea) => (idea.category || 'note') === targetCategoryId)
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        if (categoryIdeas.length === 0) {
+            toast.error(`「${targetCategory?.label || '当前分类'}」暂时没有可复制内容`);
+            return;
+        }
+
+        const clipboardText = buildCategoryClipboardText({
+            categoryLabel: targetCategory?.label || '当前分类',
+            ideas: categoryIdeas,
+        });
+
+        const success = await copyTextToClipboard(clipboardText);
+        if (!success) {
+            toast.error('分类内容复制失败，请再试一次');
+            return;
+        }
+
+        toast.success(`已复制「${targetCategory?.label || '当前分类'}」分类（${categoryIdeas.length} 条）`);
+    }, [
+        categories,
+        copyTextToClipboard,
+        filteredTodoIdeas,
+        ideas,
+        selectedCategory,
+        selectedCategoryConfig,
+        sortedIdeas,
+    ]);
+
     const handleOpenCategoryTransfer = useCallback(() => {
         const fallback = categories.find(c => c.id === selectedCategory) || categories[0];
         const devCategory = categories.find((cat) => {
@@ -1096,15 +1128,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         updateIdea,
     ]);
 
-    const markTodoAiHintSeen = useCallback(() => {
-        setShowTodoAiHint(false);
-        try {
-            localStorage.setItem(TODO_AI_HINT_SEEN_KEY, '1');
-        } catch {
-            // ignore storage errors
-        }
-    }, []);
-
     const handleOpenAiImport = useCallback(async () => {
         setIsAiImportOpen(true);
         setAiImportError('');
@@ -1112,24 +1135,8 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         setAiClassifyError('');
         setAiClassifySuccessCount(0);
         setAiAssistTab('prompt');
-        markTodoAiHintSeen();
         await handleCopyPrompt();
-    }, [handleCopyPrompt, markTodoAiHintSeen]);
-
-    useEffect(() => {
-        if (!(selectedCategory === 'todo' && showTodoAiHint)) return;
-
-        try {
-            localStorage.setItem(TODO_AI_HINT_SEEN_KEY, '1');
-        } catch {
-            // ignore storage errors
-        }
-
-        const timer = setTimeout(() => {
-            setShowTodoAiHint(false);
-        }, 5000);
-        return () => clearTimeout(timer);
-    }, [selectedCategory, showTodoAiHint]);
+    }, [handleCopyPrompt]);
 
     const handleBatchImportFromAi = useCallback(() => {
         const tasks = parseAiTodoOutput(aiImportText);
@@ -1523,14 +1530,18 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                             selectedCategory={selectedCategory}
                             onSelectCategory={setSelectedCategory}
                             onOpenManager={() => setCategoryManagerOpen(true)}
-                            onTodoDoubleClick={handleOpenAiImport}
+                            onCategoryDoubleClick={handleCopyCategorySnapshot}
                         />
 
-                        {selectedCategory === 'todo' && showTodoAiHint && (
-                            <div className="hidden md:flex items-center gap-1.5 text-[11px] text-blue-400 dark:text-blue-500 px-2">
+                        {selectedCategory === 'todo' && (
+                            <button
+                                type="button"
+                                onClick={handleOpenAiImport}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-pink-50/80 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800 text-pink-500 dark:text-pink-300 text-xs font-medium hover:bg-pink-100 dark:hover:bg-pink-900/35 transition-colors"
+                            >
                                 <Sparkles size={12} />
-                                <span>双击蓝点可打开 AI 批量导入</span>
-                            </div>
+                                <span>AI 批量导入</span>
+                            </button>
                         )}
                     </div>
 
@@ -1806,7 +1817,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                         </div>
                                         <h3 className="text-[30px] leading-tight font-light text-gray-900 dark:text-white tracking-tight">AI 批量导入代办</h3>
                                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-light">
-                                            保持当前交互不变，双击代办色点即可打开。复制提示词给你常用的 AI，再把结果粘贴回来一键导入。
+                                            通过代办分类旁边的 AI 批量导入按钮即可打开。复制提示词给你常用的 AI，再把结果粘贴回来一键导入。
                                         </p>
                                     </div>
                                     <button

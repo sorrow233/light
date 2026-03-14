@@ -7,7 +7,7 @@ const InspirationCategorySelector = ({
     selectedCategory,
     onSelectCategory,
     onOpenManager,
-    onTodoDoubleClick,
+    onCategoryDoubleClick,
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const selectorRef = useRef(null);
@@ -134,15 +134,9 @@ const InspirationCategorySelector = ({
                             key={category.id}
                             type="button"
                             onClick={() => onSelectCategory?.(category.id)}
-                            onDoubleClick={() => {
-                                if (category.id === 'todo' && selectedCategory === category.id) {
-                                    onTodoDoubleClick?.();
-                                }
-                            }}
+                            onDoubleClick={() => onCategoryDoubleClick?.(category.id)}
                             className="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 group/dot flex-shrink-0"
-                            title={category.id === 'todo'
-                                ? `${category.label} · 双击打开 AI 批量导入`
-                                : category.label}
+                            title={`${category.label} · 双击直接复制这个分类`}
                         >
                             {selectedCategory === category.id && (
                                 <motion.div
