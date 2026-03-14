@@ -22,8 +22,13 @@ export const buildCategoryClipboardText = ({ categoryLabel, ideas = [] }) => {
         const statusLabel = idea?.completed ? '已完成' : '未完成';
         const timestampLabel = formatIdeaTimestampForClipboard(idea?.timestamp);
         const content = normalizeIdeaTextForExport(idea?.content || '');
+        const note = normalizeIdeaTextForExport(idea?.note || '');
 
-        return `${index + 1}. [${statusLabel}] [${timestampLabel}] ${content || '（空）'}`;
+        if (!note) {
+            return `${index + 1}. [${statusLabel}] [${timestampLabel}] ${content || '（空）'}`;
+        }
+
+        return `${index + 1}. [${statusLabel}] [${timestampLabel}] ${content || '（空）'}\n   留言：${note}`;
     });
 
     return [
