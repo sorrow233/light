@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
             return null;
         }
 
+        rememberEmailLinkEmail(normalizedEmail);
         setEmailLinkState({
             status: 'processing',
             error: '',

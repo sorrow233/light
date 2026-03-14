@@ -68,6 +68,14 @@ const AuthModal = ({ isOpen, onClose }) => {
         }
     };
 
+    const modalTitle = authMethod === 'magic-link'
+        ? '邮箱免密登录'
+        : (isLogin ? '登录云端同步' : '创建同步账户');
+
+    const modalDescription = authMethod === 'magic-link'
+        ? '打开邮箱点一下链接，就能直接登录 Light'
+        : (isLogin ? '在多设备之间同步灵感与数据' : '为 Light 开启独立同步空间');
+
     if (!isOpen) return null;
 
     if (user) {
@@ -140,12 +148,8 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <div className="p-8">
                     <div className="mb-8 flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-light leading-tight text-gray-900">
-                                {isLogin ? '登录云端同步' : '创建同步账户'}
-                            </h2>
-                            <p className="mt-1 text-sm text-gray-400">
-                                {isLogin ? '在多设备之间同步灵感与数据' : '为 Light 开启独立同步空间'}
-                            </p>
+                            <h2 className="text-2xl font-light leading-tight text-gray-900">{modalTitle}</h2>
+                            <p className="mt-1 text-sm text-gray-400">{modalDescription}</p>
                         </div>
                         <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-gray-100">
                             <X size={20} className="text-gray-400" />
@@ -164,6 +168,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                             type="button"
                             onClick={() => {
                                 setAuthMethod('magic-link');
+                                setIsLogin(true);
                                 setError('');
                                 setNotice('');
                             }}
