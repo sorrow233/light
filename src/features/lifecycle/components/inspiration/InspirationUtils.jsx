@@ -69,7 +69,7 @@ export const R2_IMAGE_REGEX = /(https:\/\/pub-[a-z0-9]+\.r2\.dev\/[^\s]+)/gi;
 const URL_REGEX = /(https?:\/\/[^\s]+)/gi;
 
 // Helper for parsing rich text (with image support)
-export const parseRichText = (text, allProjects = []) => {
+export const parseRichText = (text) => {
     if (!text) return null;
 
     // 合并两种正则的匹配结果并去重
@@ -101,24 +101,6 @@ export const parseRichText = (text, allProjects = []) => {
                 const isWritingLink = link.includes('/writing/c/') || link.includes('/writing/trash');
 
                 if (isWritingLink) {
-                    let docTitle = '写作文档';
-                    try {
-                        // Extract the docId from the URL structure /writing/c/:category/:docId
-                        const parts = link.split('/writing/c/');
-                        if (parts.length > 1) {
-                            const pathSegments = parts[1].split('/');
-                            if (pathSegments.length >= 2) {
-                                const docId = pathSegments[1].split('?')[0].split('#')[0]; // clean trailing
-                                const foundProject = (allProjects || []).find(p => p.id === docId);
-                                if (foundProject) {
-                                    docTitle = `写作文档: ${foundProject.title || '无标题文档'}`;
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('Failed to parse writing writing link for title lookup', err);
-                    }
-
                     return (
                         <React.Fragment key={`${index}-link-frag-${segIdx}`}>
                             <a
@@ -131,7 +113,7 @@ export const parseRichText = (text, allProjects = []) => {
                                 title={link}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
-                                <span>{docTitle}</span>
+                                <span>写作文档</span>
                             </a>
                             {trailing ? <span>{trailing}</span> : null}
                         </React.Fragment>

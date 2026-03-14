@@ -9,7 +9,6 @@ import { parseRichText, getCategoryConfig } from './InspirationUtils';
 
 const InspirationItem = ({
     idea,
-    allProjects = [],
     categories = [],
     onRemove,
     onArchive,
@@ -50,7 +49,7 @@ const InspirationItem = ({
     const shouldHighlightExternalSource = Boolean(idea.source && !['user', 'ai-import'].includes(idea.source));
 
     // 缓存 parseRichText 计算结果，避免每次渲染都重新执行正则匹配
-    const parsedContent = useMemo(() => parseRichText(idea.content, allProjects), [idea.content, allProjects]);
+    const parsedContent = useMemo(() => parseRichText(idea.content), [idea.content]);
 
     const getAiAssistButtonClass = useCallback((value, isActive) => {
         if (!isActive) {

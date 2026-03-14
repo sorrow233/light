@@ -1,14 +1,14 @@
 {
     "name": "light",
     "private": true,
-    "version": "2.7.80",
+    "version": "2.7.81",
     "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
         "generate:sitemap": "node scripts/generate-sitemap.js",
-        "deploy:main": "npm run generate:sitemap && npm run build && npx wrangler pages deploy dist --project-name lighta --branch main --commit-dirty=true"
+        "deploy:main": "npm run generate:sitemap && npm run build && npx wrangler pages deploy dist --project-name lighta --branch main --commit-dirty=true --commit-message \"${CF_PAGES_COMMIT_MESSAGE:-Deploy Lighta performance improvements}\""
     },
     "dependencies": {
         "date-fns": "^4.1.0",

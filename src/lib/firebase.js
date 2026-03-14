@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCrwCk7d5msWwhavu_kni8wpR07Km0GjIQ",
@@ -15,10 +14,31 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
 // Initialize Services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+const scheduleAnalyticsInit = () => {
+    if (typeof window === 'undefined') return;
+
+    const runWhenIdle = window.requestIdleCallback
+        ? window.requestIdleCallback.bind(window)
+        : (callback) => window.setTimeout(callback, 1200);
+
+    runWhenIdle(async () => {
+        try {
+            const analyticsModule = await import('firebase/analytics');
+            const isAnalyticsSupported = await analyticsModule.isSupported();
+            if (!isAnalyticsSupported) return;
+
+            analyticsModule.getAnalytics(app);
+        } catch (error) {
+            console.warn('[Firebase] Analytics init skipped:', error);
+        }
+    });
+};
+
+scheduleAnalyticsInit();
 
 export default app;

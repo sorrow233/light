@@ -118,6 +118,7 @@ const InspirationModule = () => {
     const {
         projects: allIdeas,
         addProject: addProjectBase,
+        addProjects: addProjectsBase,
         removeProject: removeProjectBase,
         updateProject: updateProjectBase
     } = useSyncedProjects(doc, 'inspiration_items');
@@ -130,9 +131,9 @@ const InspirationModule = () => {
 
     const addIdeasBatch = useCallback((ideasToAdd) => {
         if (!Array.isArray(ideasToAdd) || ideasToAdd.length === 0) return;
-        ideasToAdd.forEach(idea => addProjectBase(idea));
+        addProjectsBase(ideasToAdd);
         immediateSync?.();
-    }, [addProjectBase, immediateSync]);
+    }, [addProjectsBase, immediateSync]);
 
     const removeIdea = useCallback((id) => {
         removeProjectBase(id);
@@ -281,6 +282,8 @@ const InspirationModule = () => {
         );
     }, []);
 
+    const selectedIdeaIdSet = useMemo(() => new Set(selectedIdeaIds), [selectedIdeaIds]);
+
     const handleBatchMove = useCallback((category) => {
         if (selectedIdeaIds.length === 0) return;
 
@@ -297,8 +300,7 @@ const InspirationModule = () => {
     const handleBatchDelete = useCallback(() => {
         if (selectedIdeaIds.length === 0) return;
 
-        const selectedIdSet = new Set(selectedIdeaIds);
-        const selectedIdeas = ideas.filter((idea) => selectedIdSet.has(idea.id));
+        const selectedIdeas = ideas.filter((idea) => selectedIdeaIdSet.has(idea.id));
         if (selectedIdeas.length === 0) return;
 
         const confirmed = window.confirm(`确认删除已选 ${selectedIdeas.length} 项吗？可在 5 秒内撤销。`);
@@ -316,7 +318,7 @@ const InspirationModule = () => {
 
         setIsSelectionMode(false);
         setSelectedIdeaIds([]);
-    }, [selectedIdeaIds, ideas, removeProjectBase, immediateSync]);
+    }, [selectedIdeaIds.length, selectedIdeaIdSet, ideas, removeProjectBase, immediateSync]);
 
     const allProjectTags = useMemo(() => {
         const tags = new Set();
@@ -934,7 +936,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         if (selectedIdeaIds.length === 0) return;
 
         const selectedIdeas = ideas
-            .filter(idea => selectedIdeaIds.includes(idea.id))
+            .filter((idea) => selectedIdeaIdSet.has(idea.id))
             .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
         const numberedText = selectedIdeas
@@ -949,7 +951,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
             setIsBatchCopied(true);
             setTimeout(() => setIsBatchCopied(false), 1500);
         }
-    }, [selectedIdeaIds, ideas, copyTextToClipboard]);
+    }, [selectedIdeaIds.length, selectedIdeaIdSet, ideas, copyTextToClipboard]);
 
     const categoryIdeasMap = useMemo(() => {
         const groupedIdeas = new Map();
@@ -1286,45 +1288,65 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         return sortedIdeas.length;
     }, [selectedCategory, filteredTodoIdeas.length, sortedIdeas.length]);
 
-    // Extract all available weeks for navigation, grouped by Year and Month
-    const groupedWeeks = useMemo(() => {
-        const olderIdeas = sortedIdeas.filter(idea => Date.now() - (idea.timestamp || Date.now()) >= 7 * 24 * 60 * 60 * 1000);
-        const groups = {};
+    const recentIdeas = useMemo(() => {
+        if (selectedCategory === 'todo') return [];
+        return sortedIdeas.filter((idea) => Date.now() - (idea.timestamp || Date.now()) < 7 * 24 * 60 * 60 * 1000);
+    }, [selectedCategory, sortedIdeas]);
 
-        olderIdeas.forEach(idea => {
-            const ideaDate = new Date(idea.timestamp || Date.now());
+    const olderIdeaGroups = useMemo(() => {
+        if (selectedCategory === 'todo') return [];
 
-            // 计算周一
-            const tempDate = new Date(ideaDate.getTime());
-            const day = tempDate.getDay();
-            const diff = tempDate.getDate() - day + (day === 0 ? -6 : 1);
-            tempDate.setDate(diff);
-            tempDate.setHours(0, 0, 0, 0);
+        const weekGroups = {};
+        sortedIdeas.forEach((idea) => {
+            if (Date.now() - (idea.timestamp || Date.now()) < 7 * 24 * 60 * 60 * 1000) {
+                return;
+            }
 
-            const weekStart = new Date(tempDate);
-            const year = weekStart.getFullYear();
-            const month = weekStart.getMonth() + 1; // 1-12
-
+            const date = new Date(idea.timestamp || Date.now());
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const weekStart = new Date(date.setDate(diff));
+            weekStart.setHours(0, 0, 0, 0);
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 6);
             weekEnd.setHours(23, 59, 59, 999);
 
             const weekKey = weekStart.getTime();
+            if (!weekGroups[weekKey]) {
+                weekGroups[weekKey] = {
+                    key: weekKey,
+                    start: weekStart,
+                    end: weekEnd,
+                    ideas: []
+                };
+            }
+            weekGroups[weekKey].ideas.push(idea);
+        });
+
+        return Object.values(weekGroups).sort((a, b) => b.start - a.start);
+    }, [selectedCategory, sortedIdeas]);
+
+    // Extract all available weeks for navigation, grouped by Year and Month
+    const groupedWeeks = useMemo(() => {
+        const groups = {};
+
+        olderIdeaGroups.forEach((week) => {
+            const weekStart = new Date(week.start.getTime());
+            const year = weekStart.getFullYear();
+            const month = weekStart.getMonth() + 1;
 
             if (!groups[year]) groups[year] = {};
             if (!groups[year][month]) groups[year][month] = [];
 
-            if (!groups[year][month].some(w => w.key === weekKey)) {
-                // 计算当前月内的周数
+            if (!groups[year][month].some((existingWeek) => existingWeek.key === week.key)) {
                 const monthStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
-                // 周数：(当前日期 + 月初是周几 - 1) / 7
                 const weekNum = Math.ceil((weekStart.getDate() + monthStart.getDay() - 1) / 7);
                 const weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周', '第六周'];
 
                 groups[year][month].push({
-                    start: weekStart,
-                    end: weekEnd,
-                    key: weekKey,
+                    start: week.start,
+                    end: week.end,
+                    key: week.key,
                     label: weekNames[weekNum - 1] || `${weekNum}周`
                 });
             }
@@ -1339,10 +1361,10 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                     .sort((a, b) => Number(b[0]) - Number(a[0])) // 月份降序
                     .map(([month, weeks]) => ({
                         month,
-                        weeks: weeks.sort((a, b) => b.key - a.key) // 周降序（最新在前）
+                        weeks: weeks.sort((a, b) => b.key - a.key)
                     }))
             }));
-    }, [sortedIdeas]);
+    }, [olderIdeaGroups]);
 
     const scrollToWeek = (weekKey) => {
         const element = document.getElementById(`week-${weekKey}`);
@@ -1623,7 +1645,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                             <InspirationItem
                                                                 key={idea.id}
                                                                 idea={idea}
-                                                                allProjects={allIdeas}
                                                                 categories={categoryConfigList}
                                                                 onRemove={handleRemove}
                                                                 onArchive={handleArchive}
@@ -1634,7 +1655,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                 onToggleComplete={handleToggleComplete}
                                                                 copiedId={copiedId}
                                                                 isSelectionMode={isSelectionMode}
-                                                                isSelected={selectedIdeaIds.includes(idea.id)}
+                                                                isSelected={selectedIdeaIdSet.has(idea.id)}
                                                                 onSelect={handleToggleSelect}
                                                             />
                                                         ))}
@@ -1650,13 +1671,10 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                     <>
                                         <div className="space-y-6">
                                             <AnimatePresence mode="popLayout" initial={false}>
-                                                {sortedIdeas
-                                                    .filter(idea => Date.now() - (idea.timestamp || Date.now()) < 7 * 24 * 60 * 60 * 1000)
-                                                    .map((idea) => (
+                                                {recentIdeas.map((idea) => (
                                                         <InspirationItem
                                                             key={idea.id}
                                                             idea={idea}
-                                                            allProjects={allIdeas}
                                                             categories={categoryConfigList}
                                                             onRemove={handleRemove}
                                                             onArchive={handleArchive}
@@ -1667,7 +1685,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                             onToggleComplete={handleToggleComplete}
                                                             copiedId={copiedId}
                                                             isSelectionMode={isSelectionMode}
-                                                            isSelected={selectedIdeaIds.includes(idea.id)}
+                                                            isSelected={selectedIdeaIdSet.has(idea.id)}
                                                             onSelect={handleToggleSelect}
                                                         />
                                                     ))}
@@ -1675,36 +1693,8 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                         </div>
 
                                         {/* 更早的项目 - 按周分组 */}
-                                        {(() => {
-                                            const olderIdeas = sortedIdeas.filter(idea => Date.now() - (idea.timestamp || Date.now()) >= 7 * 24 * 60 * 60 * 1000);
-                                            if (olderIdeas.length === 0) return null;
-
-                                            const weekGroups = {};
-                                            olderIdeas.forEach(idea => {
-                                                const date = new Date(idea.timestamp || Date.now());
-                                                const day = date.getDay();
-                                                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-                                                const weekStart = new Date(date.setDate(diff));
-                                                weekStart.setHours(0, 0, 0, 0);
-                                                const weekEnd = new Date(weekStart);
-                                                weekEnd.setDate(weekEnd.getDate() + 6);
-                                                weekEnd.setHours(23, 59, 59, 999);
-
-                                                const weekKey = weekStart.getTime();
-                                                if (!weekGroups[weekKey]) {
-                                                    weekGroups[weekKey] = {
-                                                        start: weekStart,
-                                                        end: weekEnd,
-                                                        ideas: []
-                                                    };
-                                                }
-                                                weekGroups[weekKey].ideas.push(idea);
-                                            });
-
-                                            const sortedWeeks = Object.values(weekGroups).sort((a, b) => b.start - a.start);
-
-                                            return sortedWeeks.map(week => (
-                                                <div key={week.start.getTime()}>
+                                        {olderIdeaGroups.length > 0 && olderIdeaGroups.map((week) => (
+                                                <div key={week.key} id={`week-${week.key}`}>
                                                     <div className="flex items-center gap-3 mb-4 mt-8 cursor-pointer group">
                                                         <div
                                                             className="h-px flex-1 transition-opacity group-hover:opacity-90"
@@ -1729,7 +1719,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                 <InspirationItem
                                                                     key={idea.id}
                                                                     idea={idea}
-                                                                    allProjects={allIdeas}
                                                                     categories={categoryConfigList}
                                                                     onRemove={handleRemove}
                                                                     onArchive={handleArchive}
@@ -1740,15 +1729,14 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                     onToggleComplete={handleToggleComplete}
                                                                     copiedId={copiedId}
                                                                     isSelectionMode={isSelectionMode}
-                                                                    isSelected={selectedIdeaIds.includes(idea.id)}
+                                                                    isSelected={selectedIdeaIdSet.has(idea.id)}
                                                                     onSelect={handleToggleSelect}
                                                                 />
                                                             ))}
                                                         </AnimatePresence>
                                                     </div>
                                                 </div>
-                                            ));
-                                        })()}
+                                            ))}
                                     </>
                                 )}
 
