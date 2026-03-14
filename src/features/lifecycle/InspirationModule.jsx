@@ -951,6 +951,24 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
         }
     }, [selectedIdeaIds, ideas, copyTextToClipboard]);
 
+    const categoryIdeasMap = useMemo(() => {
+        const groupedIdeas = new Map();
+
+        ideas.forEach((idea) => {
+            const categoryId = idea.category || 'note';
+            if (!groupedIdeas.has(categoryId)) {
+                groupedIdeas.set(categoryId, []);
+            }
+            groupedIdeas.get(categoryId).push(idea);
+        });
+
+        groupedIdeas.forEach((categoryIdeas) => {
+            categoryIdeas.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        });
+
+        return groupedIdeas;
+    }, [ideas]);
+
     const categoryTransferSourceCategory = useMemo(() => {
         return categories.find(cat => cat.id === categoryTransferSourceId) || categories[0] || null;
     }, [categories, categoryTransferSourceId]);
@@ -980,13 +998,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
     const handleCopyCategorySnapshot = useCallback(async (categoryId) => {
         const targetCategoryId = categoryId || selectedCategory;
         const targetCategory = categories.find((cat) => cat.id === targetCategoryId) || selectedCategoryConfig;
-        const categoryIdeas = targetCategoryId === selectedCategory
-            ? sortedIdeas
-            : targetCategoryId === 'todo'
-                ? filteredTodoIdeas
-                : [...ideas]
-                    .filter((idea) => (idea.category || 'note') === targetCategoryId)
-                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        const categoryIdeas = categoryIdeasMap.get(targetCategoryId) || [];
 
         if (categoryIdeas.length === 0) {
             toast.error(`「${targetCategory?.label || '当前分类'}」暂时没有可复制内容`);
@@ -1006,13 +1018,11 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
 
         toast.success(`已复制「${targetCategory?.label || '当前分类'}」分类（${categoryIdeas.length} 条）`);
     }, [
+        categoryIdeasMap,
         categories,
         copyTextToClipboard,
-        filteredTodoIdeas,
-        ideas,
         selectedCategory,
         selectedCategoryConfig,
-        sortedIdeas,
     ]);
 
     const handleOpenCategoryTransfer = useCallback(() => {
