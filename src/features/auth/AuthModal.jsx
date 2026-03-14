@@ -1,36 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Mail, Lock, ArrowRight } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from './AuthContext';
-
-const ALLOWED_DOMAINS = [
-    'gmail.com', 'googlemail.com',
-    'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
-    'yahoo.com', 'ymail.com',
-    'icloud.com', 'me.com', 'mac.com',
-    'proton.me', 'protonmail.com',
-    'qq.com', 'foxmail.com',
-    '163.com', '126.com', 'yeah.net',
-    'sina.com', 'sohu.com',
-    'naver.com'
-];
-
-const validateEmailDomain = (email) => {
-    const domain = email.split('@')[1]?.toLowerCase();
-    return Boolean(domain && ALLOWED_DOMAINS.includes(domain));
-};
+import PasswordAuthForm from './PasswordAuthForm';
+import MagicLinkAuthForm from './MagicLinkAuthForm';
+import { validateEmailDomain } from './authEmailDomains';
+import { normalizeAuthError } from './authMessages';
 
 const AuthModal = ({ isOpen, onClose }) => {
-    const { login, register, loginWithGoogle, logout, user } = useAuth();
+    const { login, register, loginWithGoogle, logout, user, sendEmailLoginLink } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
+    const [authMethod, setAuthMethod] = useState('magic-link');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (event) => {
+    const handlePasswordSubmit = async (event) => {
         event.preventDefault();
         setError('');
+        setNotice('');
         setLoading(true);
 
         try {
@@ -44,18 +34,37 @@ const AuthModal = ({ isOpen, onClose }) => {
             }
             onClose();
         } catch (currentError) {
-            setError(currentError.message.replace('Firebase: ', ''));
+            setError(normalizeAuthError(currentError));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleMagicLinkSubmit = async (event) => {
+        event.preventDefault();
+        setError('');
+        setNotice('');
+        setLoading(true);
+
+        try {
+            const sentTo = await sendEmailLoginLink(email);
+            setNotice(`登录链接已经发到 ${sentTo}，打开邮箱里的邮件，点一下链接就能直接登录。`);
+        } catch (currentError) {
+            setError(normalizeAuthError(currentError));
         } finally {
             setLoading(false);
         }
     };
 
     const handleGoogleLogin = async () => {
+        setError('');
+        setNotice('');
+
         try {
             await loginWithGoogle();
             onClose();
         } catch (currentError) {
-            setError(currentError.message);
+            setError(normalizeAuthError(currentError));
         }
     };
 
@@ -85,7 +94,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                     </button>
 
                     <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                        <span className="text-2xl font-bold">{user.email?.[0]?.toUpperCase()}</span>
+                        <span className="text-2xl font-bold">{user.email?.[0]?.toUpperCase() || 'L'}</span>
                     </div>
 
                     <h2 className="mb-1 text-xl font-medium text-gray-900">云端同步已启用</h2>
@@ -150,50 +159,67 @@ const AuthModal = ({ isOpen, onClose }) => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-1">
-                            <label className="ml-1 text-xs font-bold uppercase tracking-wider text-gray-400">Email</label>
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(event) => setEmail(event.target.value)}
-                                    className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-gray-700 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                                    placeholder="name@example.com"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="ml-1 text-xs font-bold uppercase tracking-wider text-gray-400">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(event) => setPassword(event.target.value)}
-                                    className="w-full rounded-xl border border-gray-100 bg-gray-50 py-3 pl-12 pr-4 text-gray-700 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                        </div>
-
+                    <div className="mb-6 inline-flex rounded-2xl bg-gray-100 p-1">
                         <button
-                            type="submit"
-                            disabled={loading}
-                            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-4 font-medium tracking-wide text-white shadow-lg shadow-gray-900/20 transition-all hover:bg-black disabled:opacity-70"
+                            type="button"
+                            onClick={() => {
+                                setAuthMethod('magic-link');
+                                setError('');
+                                setNotice('');
+                            }}
+                            className={`rounded-2xl px-4 py-2 text-sm transition-all ${
+                                authMethod === 'magic-link'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
                         >
-                            {loading ? '处理中...' : (isLogin ? '登录' : '创建账户')}
-                            {!loading && <ArrowRight size={18} />}
+                            邮箱免密
                         </button>
-                    </form>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setAuthMethod('password');
+                                setError('');
+                                setNotice('');
+                            }}
+                            className={`rounded-2xl px-4 py-2 text-sm transition-all ${
+                                authMethod === 'password'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            密码登录
+                        </button>
+                    </div>
+
+                    {authMethod === 'magic-link' ? (
+                        <MagicLinkAuthForm
+                            email={email}
+                            onEmailChange={setEmail}
+                            onSubmit={handleMagicLinkSubmit}
+                            loading={loading}
+                            notice={notice}
+                        />
+                    ) : (
+                        <PasswordAuthForm
+                            isLogin={isLogin}
+                            email={email}
+                            password={password}
+                            onEmailChange={setEmail}
+                            onPasswordChange={setPassword}
+                            onSubmit={handlePasswordSubmit}
+                            loading={loading}
+                            onToggleMode={() => {
+                                setIsLogin((current) => !current);
+                                setError('');
+                                setNotice('');
+                            }}
+                        />
+                    )}
 
                     <div className="my-6 flex items-center gap-4">
                         <div className="h-px flex-1 bg-gray-100" />
-                        <span className="font-mono text-xs text-gray-400">OR</span>
+                        <span className="font-mono text-xs text-gray-400">或</span>
                         <div className="h-px flex-1 bg-gray-100" />
                     </div>
 
@@ -210,15 +236,6 @@ const AuthModal = ({ isOpen, onClose }) => {
                         </svg>
                         使用 Google 登录
                     </button>
-
-                    <div className="mt-8 text-center">
-                        <button
-                            onClick={() => setIsLogin((current) => !current)}
-                            className="text-sm text-gray-500 underline underline-offset-4 hover:text-gray-900"
-                        >
-                            {isLogin ? '没有账号？去注册' : '已有账号？去登录'}
-                        </button>
-                    </div>
                 </div>
             </motion.div>
         </div>

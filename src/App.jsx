@@ -7,6 +7,7 @@ import { KeymapProvider, ShortcutHelpModal, useBrowserIntercept } from './featur
 import { LanguageProvider } from './features/i18n';
 import { useIOSStandalone } from './hooks/useIOSStandalone';
 import RouteLoadingScreen from './components/shared/RouteLoadingScreen';
+import EmailLinkCompletionModal from './features/auth/EmailLinkCompletionModal';
 
 const InspirationModule = lazy(() => import('./features/lifecycle/InspirationModule'));
 const InspirationArchiveModule = lazy(() => import('./features/lifecycle/InspirationArchiveModule'));
@@ -47,6 +48,7 @@ function App() {
                     </main>
 
                     <ShortcutHelpModal />
+                    <EmailLinkCompletionModal />
                 </div>
             </KeymapProvider>
         </LanguageProvider>
