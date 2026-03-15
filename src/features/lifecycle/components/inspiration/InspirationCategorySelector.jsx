@@ -94,9 +94,9 @@ const InspirationCategorySelector = ({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 6, scale: 0.98 }}
                             transition={{ duration: 0.16, ease: 'easeOut' }}
-                            className="absolute left-0 top-[calc(100%+10px)] z-40 w-[176px] overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.94),rgba(8,15,31,0.96))] p-1.5 shadow-[0_22px_56px_rgba(2,6,23,0.42)] backdrop-blur-2xl"
+                            className="absolute left-0 top-[calc(100%+10px)] z-40 w-[320px] max-w-[calc(100vw-32px)] overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.94),rgba(8,15,31,0.96))] p-2 shadow-[0_22px_56px_rgba(2,6,23,0.42)] backdrop-blur-2xl md:w-[460px]"
                         >
-                            <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto no-scrollbar">
+                            <div className="grid max-h-[320px] grid-cols-2 gap-1.5 overflow-y-auto no-scrollbar md:grid-cols-3">
                                 {categories.map((category) => {
                                     const isActive = selectedCategory === category.id;
 
@@ -108,16 +108,16 @@ const InspirationCategorySelector = ({
                                                 onSelectCategory?.(category.id);
                                                 setIsMenuOpen(false);
                                             }}
-                                            className={`flex items-center gap-2 rounded-[18px] border px-2.5 py-2 text-left transition-all duration-200 ${isActive
+                                            className={`relative flex min-h-[56px] items-start gap-2 rounded-[18px] border px-3 py-3 text-left transition-all duration-200 ${isActive
                                                 ? 'border-white/12 bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
                                                 : 'border-transparent text-white/68 hover:bg-white/6 hover:text-white'
                                                 }`}
                                         >
-                                            <span className={`h-2.5 w-2.5 rounded-full ${category.dotColor}`} />
-                                            <span className={`flex-1 truncate text-xs font-medium ${isActive ? category.textColor || 'text-white' : ''}`}>
+                                            <span className={`mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${category.dotColor}`} />
+                                            <span className={`pr-5 text-xs font-medium leading-relaxed ${isActive ? category.textColor || 'text-white' : ''}`}>
                                                 {category.label}
                                             </span>
-                                            {isActive && <Check size={13} className="text-white/70" />}
+                                            {isActive && <Check size={13} className="absolute right-3 top-3 text-white/70" />}
                                         </button>
                                     );
                                 })}
