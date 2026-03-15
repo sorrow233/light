@@ -148,12 +148,7 @@ const DataCenterModule = () => {
                                     <div
                                         className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl"
                                         style={{ backgroundColor: hexToRgba(accentHex, 0.12) }}
-                                    >
-                                        <span
-                                            className="h-3.5 w-3.5 rounded-full"
-                                            style={{ backgroundColor: accentHex }}
-                                        />
-                                    </div>
+                                    />
                                     <div
                                         className="mb-1 text-2xl font-light md:text-3xl"
                                         style={{ color: accentHex }}
