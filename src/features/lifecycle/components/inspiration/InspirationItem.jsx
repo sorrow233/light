@@ -270,16 +270,15 @@ const InspirationItem = ({
             animate={{
                 opacity: 1,
                 y: 0,
-                scale: isCharging ? 1.03 : 1,
+                scale: 1,
                 x: 0
             }}
             transition={{
-                x: { type: "spring", stiffness: 600, damping: 25 },
-                scale: { type: "spring", stiffness: 300, damping: 20 }
+                x: { type: "spring", stiffness: 600, damping: 25 }
             }}
             exit={exitAnimation}
             layout
-            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isSelected ? 'scale-[1.005]' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
+            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
         >
             {/* Main Card Component */}
             <div
@@ -287,7 +286,7 @@ const InspirationItem = ({
                 className={`
                     relative flex-1 bg-white dark:bg-gray-900 rounded-xl p-5 
                     border shadow-sm 
-                    transition-all duration-500 cursor-pointer active:scale-[0.99]
+                    transition-all duration-500 cursor-pointer
                     ${shouldHighlightExternalSource
                         ? 'border-cyan-300 dark:border-cyan-600 ring-1 ring-cyan-200/50 dark:ring-cyan-700/30'
                         : 'border-gray-100 dark:border-gray-800'}
