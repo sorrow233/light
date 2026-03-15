@@ -15,6 +15,16 @@ const isMac = () => {
  * 例如: 'mod+shift+z' => { mod: true, shift: true, key: 'z' }
  */
 const parseKeyCombo = (combo) => {
+    if (typeof combo !== 'string') {
+        return {
+            ctrl: false,
+            mod: false,
+            alt: false,
+            shift: false,
+            key: '',
+        };
+    }
+
     const parts = combo.toLowerCase().split('+');
     const result = {
         ctrl: false,
@@ -51,7 +61,8 @@ const parseKeyCombo = (combo) => {
  */
 const matchesKeyCombo = (event, combo) => {
     const parsed = parseKeyCombo(combo);
-    const eventKey = event.key.toLowerCase();
+    const eventKey = typeof event?.key === 'string' ? event.key.toLowerCase() : '';
+    if (!eventKey) return false;
 
     // 处理特殊键
     let keyMatches = false;

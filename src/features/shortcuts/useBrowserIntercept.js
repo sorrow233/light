@@ -13,6 +13,16 @@ const isMac = () => {
  * 解析快捷键组合
  */
 const parseKeyCombo = (combo) => {
+    if (typeof combo !== 'string') {
+        return {
+            mod: false,
+            ctrl: false,
+            alt: false,
+            shift: false,
+            key: '',
+        };
+    }
+
     const parts = combo.toLowerCase().split('+');
     return {
         mod: parts.includes('mod'),
@@ -28,10 +38,12 @@ const parseKeyCombo = (combo) => {
  */
 const matchesKeyCombo = (event, combo) => {
     const parsed = parseKeyCombo(combo);
+    const eventKey = typeof event?.key === 'string' ? event.key.toLowerCase() : '';
+    if (!eventKey) return false;
     const modPressed = isMac() ? event.metaKey : event.ctrlKey;
 
     return (
-        event.key.toLowerCase() === parsed.key &&
+        eventKey === parsed.key &&
         (parsed.mod ? modPressed : true) &&
         (parsed.shift ? event.shiftKey : !event.shiftKey) &&
         (parsed.alt ? event.altKey : !event.altKey)

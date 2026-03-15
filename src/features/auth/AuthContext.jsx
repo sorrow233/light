@@ -19,7 +19,7 @@ import {
     rememberEmailLinkEmail,
 } from './authEmailLink';
 import { normalizeAuthError } from './authMessages';
-import { normalizeAuthEmail, validateEmailDomain } from './authEmailDomains';
+import { normalizeAuthEmail } from './authEmailDomains';
 
 const AuthContext = createContext({});
 const DEFAULT_EMAIL_LINK_STATE = {
@@ -65,8 +65,8 @@ export const AuthProvider = ({ children }) => {
 
     const sendEmailLoginLink = useCallback(async (email) => {
         const normalizedEmail = normalizeAuthEmail(email);
-        if (!validateEmailDomain(normalizedEmail)) {
-            throw new Error('免密登录暂时只支持主流邮箱服务商，请使用常见邮箱地址。');
+        if (!normalizedEmail) {
+            throw new Error('请输入邮箱后再发送登录链接。');
         }
 
         await sendSignInLinkToEmail(auth, normalizedEmail, buildEmailLinkActionSettings());

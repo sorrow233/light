@@ -15,6 +15,7 @@ const EmailLinkCompletionModal = () => {
     const isPromptOpen = emailLinkState.status === 'needs_email';
     const isErrorOpen = emailLinkState.status === 'error';
     const isOpen = isPromptOpen || isErrorOpen;
+    const canDismiss = isErrorOpen;
 
     useEffect(() => {
         if (isPromptOpen) {
@@ -51,12 +52,14 @@ const EmailLinkCompletionModal = () => {
                 className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
             >
                 <div className="p-8">
-                    <button
-                        onClick={dismissEmailLinkState}
-                        className="absolute right-4 top-4 rounded-full p-2 transition-colors hover:bg-gray-100"
-                    >
-                        <X size={20} className="text-gray-400" />
-                    </button>
+                    {canDismiss && (
+                        <button
+                            onClick={dismissEmailLinkState}
+                            className="absolute right-4 top-4 rounded-full p-2 transition-colors hover:bg-gray-100"
+                        >
+                            <X size={20} className="text-gray-400" />
+                        </button>
+                    )}
 
                     <div className="mb-6">
                         <h2 className="text-2xl font-light leading-tight text-gray-900">
