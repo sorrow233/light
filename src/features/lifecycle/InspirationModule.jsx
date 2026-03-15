@@ -29,6 +29,7 @@ import {
 } from './components/inspiration/categoryTransferUtils';
 import { buildCategoryClipboardText } from './components/inspiration/categoryClipboardUtils';
 import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
+import { useTheme } from '../../hooks/ThemeContext';
 
 // Auto color logic: Every 3 items, switch to next color
 const getNextAutoColorIndex = (totalCount) => {
@@ -71,6 +72,7 @@ const InspirationModule = () => {
     const { categoryId: routeCategoryParam } = useParams();
     const routeCategoryId = decodeRoutePart(routeCategoryParam);
     const { user } = useAuth();
+    const { isDark } = useTheme();
     // Sync - 使用 immediateSync 实现即时同步
     const { doc, immediateSync, status } = useSync();
     const isReady = status === 'synced';
@@ -1418,22 +1420,20 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                     transition={{ duration: 0.4 }}
                 >
                     <motion.div
-                        className="p-2 bg-pink-50 dark:bg-pink-900/20 rounded-xl"
+                        className="p-2 rounded-xl accent-surface"
                         animate={archiveShake ? {
-                            backgroundColor: ['rgba(251, 207, 232, 0.2)', 'rgba(244, 114, 182, 0.6)', 'rgba(251, 207, 232, 0.2)'],
                             scale: [1, 1.2, 1],
                         } : {}}
                         transition={{ duration: 0.4 }}
                     >
-                        <Lightbulb className="w-5 h-5 text-pink-400" />
+                        <Lightbulb className="w-5 h-5 accent-text-soft" />
                     </motion.div>
                     <h2
                         onDoubleClick={() => navigate('/inspiration/archive')}
-                        className="text-3xl font-light text-pink-400 dark:text-pink-300 tracking-tight relative inline-block cursor-pointer hover:opacity-80 transition-opacity"
+                        className="text-3xl font-light tracking-tight relative inline-block cursor-pointer hover:opacity-80 transition-opacity accent-text-soft"
                     >
                         {t('inspiration.title')}
-                        {/* Pink Brush Stroke */}
-                        <span className="absolute -bottom-1 left-0 w-full h-2 bg-gradient-to-r from-pink-200/80 via-pink-300/60 to-transparent dark:from-pink-700/50 dark:via-pink-600/30 dark:to-transparent rounded-full blur-[2px]" />
+                        <span className="absolute -bottom-1 left-0 w-full h-2 accent-brush rounded-full blur-[2px]" />
                     </h2>
                 </motion.div>
 
@@ -1454,7 +1454,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                 >
                     {/* Input Section */}
                     <div className="relative mb-20 group z-30">
-                        <Spotlight className="rounded-2xl transition-all duration-300 focus-within:ring-1 focus-within:ring-pink-300 dark:focus-within:ring-pink-500 focus-within:shadow-[0_0_30px_-5px_rgba(244,114,182,0.4)]" spotColor="rgba(244, 114, 182, 0.12)">
+                        <Spotlight className="rounded-2xl accent-focus-shell" spotColor="var(--accent-spotlight)">
                             <div className="absolute -inset-1 bg-gradient-to-r from-gray-100 dark:from-gray-800 via-gray-50 dark:via-gray-900 to-gray-100 dark:to-gray-800 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                             <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_20px_-4px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-gray-800 overflow-visible transition-all duration-300 group-hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.08)] dark:group-hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.4)] group-hover:border-gray-200 dark:group-hover:border-gray-700">
 
@@ -1465,7 +1465,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                     onChange={setInput}
                                     onKeyDown={handleKeyDown}
                                     placeholder={t('inspiration.placeholder')}
-                                    className="w-full bg-transparent text-lg text-gray-800 dark:text-gray-100 caret-pink-500 outline-none p-6 pb-20 min-h-[200px] font-light leading-relaxed relative z-10 break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400/50"
+                                    className="w-full bg-transparent text-lg text-gray-800 dark:text-gray-100 outline-none p-6 pb-20 min-h-[200px] font-light leading-relaxed relative z-10 break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400/50"
                                     style={{
                                         fontFamily: 'inherit',
                                         lineHeight: '1.625',
@@ -1473,6 +1473,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                         fontVariantLigatures: 'none',
                                         WebkitFontSmoothing: 'antialiased',
                                         MozOsxFontSmoothing: 'grayscale',
+                                        caretColor: 'var(--accent-500)',
                                     }}
                                 />
 
@@ -1483,10 +1484,11 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: 10 }}
-                                            className="absolute left-6 z-50 bg-white dark:bg-gray-900 rounded-lg shadow-xl shadow-pink-100 dark:shadow-pink-900/10 border border-gray-100 dark:border-gray-800 p-1 min-w-[200px] max-h-[200px] overflow-y-auto"
+                                            className="absolute left-6 z-50 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 p-1 min-w-[200px] max-h-[200px] overflow-y-auto"
                                             style={{
                                                 top: 'auto', // Dynamic positioning would require more complex calc, ensuring it shows below input or "near cursor"
-                                                bottom: '80px' // Show above toolbar
+                                                bottom: '80px', // Show above toolbar
+                                                boxShadow: `0 16px 28px -20px rgb(var(--accent-rgb) / ${isDark ? '0.24' : '0.20'})`,
                                             }}
                                         >
                                             <div className="px-2 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -1499,9 +1501,12 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                     className={`
                                                 w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2
                                                 ${index === autocompleteIndex
-                                                            ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300'
+                                                            ? 'text-gray-900 dark:text-white'
                                                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}
                                             `}
+                                                    style={index === autocompleteIndex
+                                                        ? { backgroundColor: 'var(--accent-soft-bg)', color: isDark ? 'var(--accent-300)' : 'var(--accent-600)' }
+                                                        : undefined}
                                                 >
                                                     <Hash size={12} className="opacity-50" />
                                                     {tag}
@@ -1541,7 +1546,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                         <button
                                                             key={tag}
                                                             onClick={() => handleTagClick(tag)}
-                                                            className="flex-shrink-0 px-2 py-1 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/40 rounded-md text-[11px] font-medium transition-all duration-300 border border-pink-100 dark:border-pink-800/30 whitespace-nowrap"
+                                                            className="flex-shrink-0 px-2 py-1 accent-chip rounded-md text-[11px] font-medium transition-all duration-300 whitespace-nowrap"
                                                         >
                                                             {tag}
                                                         </button>
@@ -1558,7 +1563,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                         <button
                                             onClick={handleAdd}
                                             disabled={!input.trim()}
-                                            className="flex items-center justify-center p-3 bg-pink-400 dark:bg-pink-500 text-white rounded-xl hover:bg-pink-500 dark:hover:bg-pink-400 disabled:opacity-30 transition-all duration-300 active:scale-95 shadow-lg shadow-pink-200 dark:shadow-pink-900/20"
+                                            className="flex items-center justify-center p-3 accent-button rounded-xl disabled:opacity-30 transition-all duration-300 active:scale-95"
                                         >
                                             <ArrowRight size={18} strokeWidth={2} />
                                         </button>
@@ -1600,7 +1605,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                             <button
                                 type="button"
                                 onClick={handleOpenAiImport}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-pink-50/80 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800 text-pink-500 dark:text-pink-300 text-xs font-medium hover:bg-pink-100 dark:hover:bg-pink-900/35 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full accent-chip text-xs font-medium transition-colors"
                             >
                                 <Sparkles size={12} />
                                 <span>AI 批量导入</span>

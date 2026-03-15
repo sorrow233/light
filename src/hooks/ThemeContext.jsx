@@ -1,11 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSync } from '../features/sync/SyncContext';
 import { useSyncedMap } from '../features/sync/useSyncStore';
+import {
+    ACCENT_THEME_OPTIONS,
+    DEFAULT_ACCENT_THEME,
+    getAccentThemeCssVariables,
+    normalizeAccentTheme,
+} from '../theme/accentTheme';
 
 const ThemeContext = createContext();
 const THEME_KEY = 'light_theme';
 const THEME_OVERRIDE_KEY = 'light_theme_override';
 const THEME_MANUAL_UNTIL_KEY = 'light_theme_manual_until';
+const ACCENT_THEME_KEY = 'light_accent_theme';
 const MANUAL_THEME_LOCK_MS = 5 * 60 * 60 * 1000;
 
 // 获取系统主题偏好
@@ -39,6 +46,11 @@ function ThemeProviderInner({ children }) {
     const { doc } = useSync();
     const { data: preferences, set } = useSyncedMap(doc, 'user_preferences');
 
+    const getStoredAccentTheme = () => {
+        if (typeof window === 'undefined') return DEFAULT_ACCENT_THEME;
+        return normalizeAccentTheme(localStorage.getItem(ACCENT_THEME_KEY) || DEFAULT_ACCENT_THEME);
+    };
+
     const getStoredManualUntil = () => {
         if (typeof window === 'undefined') return 0;
         return parseTimestamp(localStorage.getItem(THEME_MANUAL_UNTIL_KEY));
@@ -56,6 +68,7 @@ function ThemeProviderInner({ children }) {
     });
 
     const [manualUntil, setManualUntilState] = useState(() => getStoredManualUntil());
+    const [accentTheme, setAccentThemeState] = useState(() => getStoredAccentTheme());
 
     const applyTheme = (nextTheme, nextManualUntil = 0) => {
         localStorage.setItem(THEME_KEY, nextTheme);
@@ -73,6 +86,12 @@ function ThemeProviderInner({ children }) {
         setThemeState(nextTheme);
     };
 
+    const applyAccentTheme = (nextAccentTheme) => {
+        const normalizedAccentTheme = normalizeAccentTheme(nextAccentTheme);
+        localStorage.setItem(ACCENT_THEME_KEY, normalizedAccentTheme);
+        setAccentThemeState(normalizedAccentTheme);
+    };
+
     const syncThemeToCloud = (nextTheme, nextManualUntil = 0) => {
         if (!doc) return;
 
@@ -80,6 +99,11 @@ function ThemeProviderInner({ children }) {
         set('theme', nextTheme);
         set('themeOverride', hasManualLock);
         set('themeManualUntil', hasManualLock ? nextManualUntil : 0);
+    };
+
+    const syncAccentThemeToCloud = (nextAccentTheme) => {
+        if (!doc) return;
+        set('accentTheme', normalizeAccentTheme(nextAccentTheme));
     };
 
     // 从云端同步主题设置
@@ -114,6 +138,26 @@ function ThemeProviderInner({ children }) {
         }
     }, [doc, preferences?.theme, preferences?.themeOverride, preferences?.themeManualUntil, set]);
 
+    useEffect(() => {
+        const storedAccentTheme = getStoredAccentTheme();
+
+        if (!preferences) {
+            applyAccentTheme(storedAccentTheme);
+            return;
+        }
+
+        if (typeof preferences.accentTheme === 'string') {
+            applyAccentTheme(preferences.accentTheme);
+            return;
+        }
+
+        applyAccentTheme(storedAccentTheme);
+
+        if (storedAccentTheme !== DEFAULT_ACCENT_THEME) {
+            syncAccentThemeToCloud(storedAccentTheme);
+        }
+    }, [doc, preferences?.accentTheme, set]);
+
     // 手动锁定到期后自动恢复系统跟随
     useEffect(() => {
         if (!isManualLockActive(manualUntil)) return;
@@ -133,7 +177,15 @@ function ThemeProviderInner({ children }) {
         root.classList.remove('light', 'dark');
         root.classList.add(theme);
         localStorage.setItem(THEME_KEY, theme);
-    }, [theme]);
+
+        const accentThemeVars = getAccentThemeCssVariables(accentTheme, theme === 'dark');
+        Object.entries(accentThemeVars).forEach(([key, value]) => {
+            root.style.setProperty(key, value);
+        });
+
+        root.dataset.accentTheme = accentTheme;
+        localStorage.setItem(ACCENT_THEME_KEY, accentTheme);
+    }, [accentTheme, theme]);
 
     // 监听系统主题变化
     useEffect(() => {
@@ -169,6 +221,8 @@ function ThemeProviderInner({ children }) {
     const value = {
         isDark: theme === 'dark',
         theme,
+        accentTheme,
+        accentThemeOptions: ACCENT_THEME_OPTIONS,
         isManualThemeLocked: isManualLockActive(manualUntil),
         manualThemeLockUntil: manualUntil,
         toggleTheme,
@@ -177,6 +231,11 @@ function ThemeProviderInner({ children }) {
             const lockUntil = Date.now() + MANUAL_THEME_LOCK_MS;
             applyTheme(normalized, lockUntil);
             syncThemeToCloud(normalized, lockUntil);
+        },
+        setAccentTheme: (nextAccentTheme) => {
+            const normalizedAccentTheme = normalizeAccentTheme(nextAccentTheme);
+            applyAccentTheme(normalizedAccentTheme);
+            syncAccentThemeToCloud(normalizedAccentTheme);
         },
         useSystemTheme,
     };

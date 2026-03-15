@@ -17,22 +17,30 @@ import { motion, AnimatePresence } from 'framer-motion';
  * - pendingCount: number (optional, for "Saving (3)...")
  */
 const SyncStatus = ({ status, pendingCount = 0, themeColor }) => {
+    const isStyledTheme = themeColor?.kind === 'style';
 
     // Helper for status config
     const getConfig = () => {
         switch (status) {
             case 'synced':
                 // Use themeColor if available, otherwise default to emerald
-                const dotColor = themeColor ? themeColor.dot : 'bg-emerald-500';
-                const shadowColor = themeColor ? themeColor.shadow : 'shadow-[0_0_8px_rgba(16,185,129,0.4)]';
-                const textColor = themeColor ? themeColor.text : 'text-emerald-600';
-                const bgColor = themeColor ? themeColor.bg : 'bg-emerald-50/50';
+                const dotColor = !themeColor || isStyledTheme ? 'bg-emerald-500' : themeColor.dot;
+                const shadowColor = !themeColor || isStyledTheme ? 'shadow-[0_0_8px_rgba(16,185,129,0.4)]' : themeColor.shadow;
+                const textColor = !themeColor || isStyledTheme ? 'text-emerald-600' : themeColor.text;
+                const bgColor = !themeColor || isStyledTheme ? 'bg-emerald-50/50' : themeColor.bg;
 
                 return {
-                    icon: <div className={`w-2 h-2 rounded-full ${dotColor} ${shadowColor}`} />,
+                    icon: (
+                        <div
+                            className={`w-2 h-2 rounded-full ${isStyledTheme ? '' : `${dotColor} ${shadowColor}`}`}
+                            style={isStyledTheme ? themeColor.dotStyle : undefined}
+                        />
+                    ),
                     text: 'Synced',
                     color: `${textColor} ${bgColor}`,
-                    tooltip: 'All changes saved to cloud'
+                    tooltip: 'All changes saved to cloud',
+                    containerStyle: isStyledTheme ? themeColor.containerStyle : undefined,
+                    textStyle: isStyledTheme ? themeColor.textStyle : undefined,
                 };
             case 'syncing':
                 return {
@@ -70,9 +78,10 @@ const SyncStatus = ({ status, pendingCount = 0, themeColor }) => {
                     min-w-[100px]
                     ${config.color}
                 `}
+                style={config.containerStyle}
             >
                 {config.icon}
-                <span className="text-xs font-medium tracking-wide">
+                <span className="text-xs font-medium tracking-wide" style={config.textStyle}>
                     {config.text}
                 </span>
             </motion.div>

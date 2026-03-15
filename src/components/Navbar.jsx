@@ -43,7 +43,7 @@ const Navbar = () => {
 
     const getActiveTheme = () => {
         const path = location.pathname;
-        if (path.startsWith('/inspiration')) return 'pink';
+        if (path.startsWith('/inspiration')) return 'inspiration';
         if (path.startsWith('/data')) return 'indigo';
         return 'default';
     };
@@ -51,11 +51,25 @@ const Navbar = () => {
     const activeTheme = getActiveTheme();
 
     const themeConfigs = {
-        pink: {
-            spotlight: isDark ? "rgba(244, 114, 182, 0.15)" : "rgba(244, 114, 182, 0.12)",
-            iconText: 'text-pink-400 dark:text-pink-300',
-            iconHover: 'hover:bg-pink-50 dark:hover:bg-pink-900/20',
-            sync: { dot: 'bg-pink-400', shadow: 'shadow-[0_0_8px_rgba(244,114,182,0.4)]', text: 'text-pink-500', bg: 'bg-pink-50/50 dark:bg-pink-900/20' }
+        inspiration: {
+            spotlight: 'var(--accent-spotlight)',
+            spotlightStrong: 'var(--accent-spotlight-strong)',
+            iconStyle: {
+                color: 'var(--accent-400)',
+            },
+            sync: {
+                kind: 'style',
+                dotStyle: {
+                    backgroundColor: 'var(--accent-400)',
+                    boxShadow: '0 0 8px rgb(var(--accent-rgb) / 0.4)',
+                },
+                containerStyle: {
+                    backgroundColor: 'var(--accent-soft-bg)',
+                },
+                textStyle: {
+                    color: 'var(--accent-500)',
+                },
+            },
         },
         indigo: {
             spotlight: isDark ? "rgba(99, 102, 241, 0.15)" : "rgba(99, 102, 241, 0.1)",
@@ -82,23 +96,24 @@ const Navbar = () => {
                             const Icon = tab.icon;
                             const isActive = location.pathname.startsWith(tab.path);
                             const activeColors = {
-                                inspiration: '!text-pink-400 dark:!text-pink-300',
+                                inspiration: '',
                                 data: 'text-indigo-500 dark:text-indigo-400',
                             };
 
                             const activeColorClass = activeColors[tab.id] || 'text-gray-900 dark:text-white';
                             const tabTheme = themeConfigs[
                                 tab.id === 'inspiration'
-                                    ? 'pink'
+                                    ? 'inspiration'
                                     : tab.id === 'data'
                                         ? 'indigo'
                                         : 'default'
                             ];
-
-                            const brushGradients = {
-                                inspiration: 'from-pink-200/80 via-pink-300/60 to-transparent dark:from-pink-700/50 dark:via-pink-600/30',
-                                data: 'from-indigo-200/80 via-indigo-300/60 to-transparent dark:from-indigo-700/50 dark:via-indigo-600/30'
-                            };
+                            const activeInspirationStyle = tab.id === 'inspiration' && isActive
+                                ? { color: 'var(--accent-400)' }
+                                : undefined;
+                            const dataBrushClass = tab.id === 'data'
+                                ? 'bg-gradient-to-r from-indigo-200/80 via-indigo-300/60 to-transparent dark:from-indigo-700/50 dark:via-indigo-600/30'
+                                : '';
 
                             return (
                                 <button
@@ -111,12 +126,13 @@ const Navbar = () => {
                                             ? `${activeColorClass}`
                                             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}
                                     `}
+                                    style={activeInspirationStyle}
                                 >
                                     {isActive && (
                                         <div
                                             className="absolute inset-[-25%] z-[-1] pointer-events-none blur-2xl opacity-100"
                                             style={{
-                                                background: `radial-gradient(circle at center, ${tabTheme.spotlight.replace('0.15', '0.4').replace('0.1', '0.3').replace('0.12', '0.3')} 0%, transparent 75%)`
+                                                background: `radial-gradient(circle at center, ${(tabTheme.spotlightStrong || tabTheme.spotlight).replace('0.15', '0.4').replace('0.1', '0.3').replace('0.12', '0.3')} 0%, transparent 75%)`
                                             }}
                                         />
                                     )}
@@ -129,7 +145,10 @@ const Navbar = () => {
                                                 initial={{ opacity: 0, scaleX: 0 }}
                                                 animate={{ opacity: 1, scaleX: 1 }}
                                                 exit={{ opacity: 0, scaleX: 0 }}
-                                                className={`absolute -bottom-0.5 left-2 right-2 h-1.5 bg-gradient-to-r ${brushGradients[tab.id]} to-transparent rounded-full blur-[1px] z-[-1]`}
+                                                className={`absolute -bottom-0.5 left-2 right-2 h-1.5 rounded-full blur-[1px] z-[-1] ${dataBrushClass}`}
+                                                style={tab.id === 'inspiration'
+                                                    ? { background: 'linear-gradient(to right, var(--accent-brush-from), var(--accent-brush-via), transparent)' }
+                                                    : undefined}
                                             />
                                         )}
                                     </AnimatePresence>
@@ -145,16 +164,18 @@ const Navbar = () => {
                         <div className="flex items-center gap-1 md:gap-1.5">
                             <button
                                 onClick={toggleTheme}
-                                className={`relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-full transition-all z-40 shrink-0 ${currentConfig.iconText} ${currentConfig.iconHover}`}
+                                className={`relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-full transition-all z-40 shrink-0 ${currentConfig.iconText || 'hover:text-gray-600 dark:hover:text-gray-300'} ${currentConfig.iconHover || 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                                 title={`${isDark ? t('common.lightMode') : t('common.darkMode')} · 5h`}
+                                style={currentConfig.iconStyle}
                             >
                                 {isDark ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
                             </button>
 
                             <button
                                 onClick={() => setIsDataModalOpen(true)}
-                                className={`relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-full transition-all z-40 shrink-0 ${currentConfig.iconText} ${currentConfig.iconHover}`}
+                                className={`relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-full transition-all z-40 shrink-0 ${currentConfig.iconText || 'hover:text-gray-600 dark:hover:text-gray-300'} ${currentConfig.iconHover || 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                                 title={t('navbar.dataManagement')}
+                                style={currentConfig.iconStyle}
                             >
                                 <Database size={16} strokeWidth={1.5} />
                             </button>

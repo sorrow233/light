@@ -5,10 +5,25 @@
 :root {
     --bg-primary: #ffffff;
     --bg-secondary: #fdf2f8;
-    /* Pink background */
     --text-primary: #1a1a1a;
     --text-secondary: #666666;
     --safe-top: env(safe-area-inset-top, 0px);
+    --accent-50: #fdf2f8;
+    --accent-100: #fce7f3;
+    --accent-200: #fbcfe8;
+    --accent-300: #f9a8d4;
+    --accent-400: #f472b6;
+    --accent-500: #ec4899;
+    --accent-600: #db2777;
+    --accent-rgb: 244 114 182;
+    --accent-soft-bg: rgb(244 114 182 / 0.1);
+    --accent-soft-bg-strong: rgb(244 114 182 / 0.16);
+    --accent-border: #fbcfe8;
+    --accent-border-strong: #f9a8d4;
+    --accent-spotlight: rgb(244 114 182 / 0.12);
+    --accent-spotlight-strong: rgb(244 114 182 / 0.28);
+    --accent-brush-from: #fbcfe8;
+    --accent-brush-via: rgb(244 114 182 / 0.46);
 }
 
 .dark {
@@ -28,6 +43,60 @@ body {
     /* Dynamic constrained viewport height for mobile */
     -webkit-tap-highlight-color: transparent;
     /* Remove tap highlight on mobile */
+}
+
+.accent-text {
+    color: var(--accent-500);
+}
+
+.accent-text-strong {
+    color: var(--accent-600);
+}
+
+.accent-text-soft {
+    color: var(--accent-400);
+}
+
+.accent-surface {
+    background-color: var(--accent-soft-bg);
+    border-color: var(--accent-border);
+}
+
+.accent-surface-strong {
+    background-color: var(--accent-soft-bg-strong);
+    border-color: var(--accent-border-strong);
+}
+
+.accent-chip {
+    background-color: var(--accent-soft-bg);
+    border: 1px solid var(--accent-border);
+    color: var(--accent-500);
+}
+
+.accent-chip:hover {
+    background-color: var(--accent-soft-bg-strong);
+}
+
+.accent-button {
+    background-color: var(--accent-400);
+    color: #ffffff;
+    box-shadow: 0 18px 36px -24px rgb(var(--accent-rgb) / 0.45);
+}
+
+.accent-button:hover {
+    background-color: var(--accent-500);
+}
+
+.accent-brush {
+    background: linear-gradient(to right, var(--accent-brush-from), var(--accent-brush-via), transparent);
+}
+
+.accent-focus-shell {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.accent-focus-shell:focus-within {
+    box-shadow: 0 0 0 1px var(--accent-border-strong), 0 0 30px -5px rgb(var(--accent-rgb) / 0.32);
 }
 
 /* Custom Scrollbar - Light Mode */
