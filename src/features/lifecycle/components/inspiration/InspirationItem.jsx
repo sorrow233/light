@@ -39,6 +39,8 @@ const InspirationItem = ({
     const inputRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
     const noteInputRef = React.useRef(null);
+    const noteEditorRef = React.useRef(null);
+    const cardRef = React.useRef(null);
     const { t } = useTranslation();
 
     const categoryConfig = useMemo(
@@ -98,6 +100,23 @@ const InspirationItem = ({
         }
     }, [idea.note, isEditingNote]);
 
+    React.useEffect(() => {
+        if (!isEditingNote) return undefined;
+
+        const handlePointerDownOutside = (event) => {
+            if (cardRef.current?.contains(event.target)) return;
+            handleNoteSave();
+        };
+
+        document.addEventListener('mousedown', handlePointerDownOutside);
+        document.addEventListener('touchstart', handlePointerDownOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDownOutside);
+            document.removeEventListener('touchstart', handlePointerDownOutside);
+        };
+    }, [isEditingNote, noteDraft, idea.note]);
+
     // Handle double click to toggle completion (persisted)
     const handleDoubleClick = (e) => {
         e.stopPropagation();
@@ -156,7 +175,7 @@ const InspirationItem = ({
     };
 
     const handleNoteKeyDown = (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             handleNoteSave();
         }
@@ -167,8 +186,9 @@ const InspirationItem = ({
     };
 
     // Handle dot click to edit note
-    const handleDotClick = (e) => {
+    const handleOpenNoteEditor = (e) => {
         e.stopPropagation();
+        cancelLongPress();
         if (!isArchiveView) {
             setIsEditingNote(true);
         }
@@ -239,7 +259,7 @@ const InspirationItem = ({
                 }
             }}
             onPointerDown={(e) => {
-                if (isSelectionMode) return;
+                if (isSelectionMode || isEditingNote) return;
                 handlePointerDown(e);
             }}
             onPointerUp={cancelLongPress}
@@ -263,6 +283,7 @@ const InspirationItem = ({
         >
             {/* Main Card Component */}
             <div
+                ref={cardRef}
                 className={`
                     relative flex-1 bg-white dark:bg-gray-900 rounded-xl p-5 
                     border shadow-sm 
@@ -277,7 +298,7 @@ const InspirationItem = ({
                     group/card
                 `}
                 onClick={() => {
-                    if (isDragging || isEditingContent) return;
+                    if (isDragging || isEditingContent || isEditingNote) return;
                     if (isSelectionMode) {
                         onSelect?.(idea.id);
                         return;
@@ -334,36 +355,63 @@ const InspirationItem = ({
 
                 <div className="flex items-start gap-3">
                     {/* Color Status Dot - Click to Edit Note */}
-                    <div className="flex-shrink-0 mt-1.5 relative z-10">
-                        <div
-                            onClick={handleDotClick}
-                            className={`w-2.5 h-2.5 rounded-full ${categoryConfig.dotColor} shadow-sm cursor-pointer transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 hover:ring-pink-300/60 dark:hover:ring-pink-500/40 hover:ring-offset-white dark:hover:ring-offset-gray-900 ${isCompleted ? 'opacity-50' : ''}`}
+                    <div ref={noteEditorRef} className="flex-shrink-0 mt-1.5 relative z-10">
+                        <button
+                            type="button"
+                            onClick={handleOpenNoteEditor}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="-m-3 flex h-8 w-8 items-center justify-center rounded-full"
                             title={t('inspiration.addNote', '添加随记')}
-                        />
+                        >
+                            <span
+                                className={`w-2.5 h-2.5 rounded-full ${categoryConfig.dotColor} shadow-sm transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 hover:ring-pink-300/60 dark:hover:ring-pink-500/40 hover:ring-offset-white dark:hover:ring-offset-gray-900 ${isCompleted ? 'opacity-50' : ''}`}
+                            />
+                        </button>
                         {/* Note Edit Popover */}
                         <AnimatePresence>
                             {isEditingNote && (
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                                    className="absolute top-6 left-0 z-50 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-pink-200 dark:border-pink-800 p-2"
+                                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                                    className="absolute top-8 left-0 z-[90] w-[320px] max-w-[calc(100vw-3rem)] rounded-xl border border-pink-200 bg-white p-3 shadow-2xl shadow-pink-200/40 dark:border-pink-800 dark:bg-gray-900 dark:shadow-pink-950/30"
                                     onClick={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
                                 >
-                                    <input
+                                    <textarea
                                         ref={noteInputRef}
-                                        type="text"
                                         value={noteDraft}
                                         onChange={(e) => setNoteDraft(e.target.value)}
                                         onKeyDown={handleNoteKeyDown}
-                                        onBlur={handleNoteSave}
                                         placeholder={t('inspiration.notePlaceholder', '添加随记...')}
-                                        className="w-full px-2 py-1.5 text-sm bg-pink-50 dark:bg-pink-900/30 rounded border-none outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400"
+                                        rows={4}
+                                        className="w-full resize-none rounded-lg border border-transparent bg-pink-50/90 px-3 py-2.5 text-sm leading-relaxed text-gray-700 outline-none placeholder:text-gray-400 min-h-[112px] dark:bg-pink-900/30 dark:text-gray-200"
                                     />
-                                    <div className="mt-1.5 text-[9px] text-gray-400 flex items-center gap-2">
-                                        <span>Enter {t('common.save', '保存')}</span>
-                                        <span>·</span>
-                                        <span>Esc {t('common.cancel', '取消')}</span>
+                                    <div className="mt-2 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                                            <span>⌘/Ctrl + Enter {t('common.save', '保存')}</span>
+                                            <span>·</span>
+                                            <span>Esc {t('common.cancel', '取消')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsEditingNote(false);
+                                                    setNoteDraft(idea.note || '');
+                                                }}
+                                                className="px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            >
+                                                {t('common.cancel', '取消')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleNoteSave}
+                                                className="rounded-full bg-pink-500 px-2.5 py-1 text-[11px] text-white transition-colors hover:bg-pink-600"
+                                            >
+                                                {t('common.save', '保存')}
+                                            </button>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -484,11 +532,16 @@ const InspirationItem = ({
             {/* Note Display - Outside the Card */}
             {
                 idea.note && (
-                    <div className="w-full md:w-[140px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
+                    <button
+                        type="button"
+                        onClick={handleOpenNoteEditor}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="w-full md:w-[160px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500 text-left"
+                    >
                         <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text`}>
                             {idea.note}
                         </p>
-                    </div>
+                    </button>
                 )
             }
         </motion.div >
