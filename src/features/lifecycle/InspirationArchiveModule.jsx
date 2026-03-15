@@ -21,7 +21,6 @@ const InspirationArchiveModule = () => {
         INSPIRATION_CATEGORIES,
         { initializeDefaults: false, cleanupDuplicates: true }
     );
-    const [copiedId, setCopiedId] = React.useState(null);
     const categories = useMemo(() => {
         const baseCategories = syncedCategories.length > 0 ? syncedCategories : INSPIRATION_CATEGORIES;
         const uniqueMap = new Map();
@@ -60,13 +59,13 @@ const InspirationArchiveModule = () => {
         immediateSync?.();
     };
 
-    const handleCopy = async (content, id) => {
+    const handleCopy = async (content) => {
         try {
             await navigator.clipboard.writeText(content);
-            setCopiedId(id);
-            setTimeout(() => setCopiedId(null), 2000);
+            return true;
         } catch (err) {
             console.error('Failed to copy:', err);
+            return false;
         }
     };
 
@@ -127,7 +126,6 @@ const InspirationArchiveModule = () => {
                                     immediateSync?.();
                                 }}
                                 isArchiveView={true}
-                                copiedId={copiedId}
                             />
                         ))
                     ) : (

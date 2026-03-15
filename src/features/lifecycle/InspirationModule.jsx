@@ -159,7 +159,6 @@ const InspirationModule = () => {
 
     const [input, setInput] = useState('');
     const [selectedColorIndex, setSelectedColorIndex] = useState(null);
-    const [copiedId, setCopiedId] = useState(null);
     const [showWeekSelector, setShowWeekSelector] = useState(false);
     const [deletedIdeas, setDeletedIdeas] = useState([]);
     const [archiveShake, setArchiveShake] = useState(false);
@@ -461,7 +460,7 @@ const InspirationModule = () => {
         updateIdea(id, { content });
     }, [updateIdea]);
 
-    const handleCopy = useCallback(async (content, id) => {
+    const handleCopy = useCallback(async (content) => {
         try {
             // 检测内容中是否包含图片 URL
             const imgMatches1 = content.match(new RegExp(IMAGE_URL_REGEX.source, 'gi')) || [];
@@ -477,18 +476,16 @@ const InspirationModule = () => {
                 // 复制第一张图片 + 文字到剪贴板
                 const result = await copyImageToClipboard(imageUrls[0], textPart);
                 if (result) {
-                    setCopiedId(id);
-                    setTimeout(() => setCopiedId(null), 2000);
-                    return;
+                    return true;
                 }
             }
 
             // 无图片或图片复制失败：降级为纯文本复制
             await navigator.clipboard.writeText(content);
-            setCopiedId(id);
-            setTimeout(() => setCopiedId(null), 2000);
+            return true;
         } catch (err) {
             console.error('Failed to copy:', err);
+            return false;
         }
     }, []);
 
@@ -1689,7 +1686,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                 onUpdateNote={handleUpdateNote}
                                                                 onUpdateContent={handleUpdateContent}
                                                                 onToggleComplete={handleToggleComplete}
-                                                                copiedId={copiedId}
                                                                 isSelectionMode={isSelectionMode}
                                                                 isSelected={selectedIdeaIdSet.has(idea.id)}
                                                                 onSelect={handleToggleSelect}
@@ -1719,7 +1715,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                             onUpdateNote={handleUpdateNote}
                                                             onUpdateContent={handleUpdateContent}
                                                             onToggleComplete={handleToggleComplete}
-                                                            copiedId={copiedId}
                                                             isSelectionMode={isSelectionMode}
                                                             isSelected={selectedIdeaIdSet.has(idea.id)}
                                                             onSelect={handleToggleSelect}
@@ -1763,7 +1758,6 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                     onUpdateNote={handleUpdateNote}
                                                                     onUpdateContent={handleUpdateContent}
                                                                     onToggleComplete={handleToggleComplete}
-                                                                    copiedId={copiedId}
                                                                     isSelectionMode={isSelectionMode}
                                                                     isSelected={selectedIdeaIdSet.has(idea.id)}
                                                                     onSelect={handleToggleSelect}

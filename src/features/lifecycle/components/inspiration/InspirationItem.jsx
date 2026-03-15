@@ -18,7 +18,6 @@ const InspirationItem = ({
     onUpdateContent,
     onToggleComplete,
     isArchiveView = false,
-    copiedId,
     isSelectionMode = false,
     isSelected = false,
     onSelect,
@@ -31,16 +30,15 @@ const InspirationItem = ({
     const [isDragging, setIsDragging] = React.useState(false);
     const [isEditingContent, setIsEditingContent] = React.useState(false);
     const [isEditingNote, setIsEditingNote] = React.useState(false);
+    const [isCopiedVisible, setIsCopiedVisible] = React.useState(false);
     const [exitDirection, setExitDirection] = React.useState(null); // 'right' for archive, 'left' for delete
     const [contentDraft, setContentDraft] = React.useState(idea.content || '');
     const [noteDraft, setNoteDraft] = React.useState(idea.note || '');
-    const [isCharging, setIsCharging] = React.useState(false); // Visual feedback for long press
     const longPressTimer = React.useRef(null);
-    const inputRef = React.useRef(null);
+    const copiedTimerRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
     const noteInputRef = React.useRef(null);
-    const noteEditorRef = React.useRef(null);
-    const cardRef = React.useRef(null);
+    const itemRef = React.useRef(null);
     const { t } = useTranslation();
 
     const categoryConfig = useMemo(
@@ -100,11 +98,17 @@ const InspirationItem = ({
         }
     }, [idea.note, isEditingNote]);
 
+    React.useEffect(() => () => {
+        if (copiedTimerRef.current) {
+            clearTimeout(copiedTimerRef.current);
+        }
+    }, []);
+
     React.useEffect(() => {
         if (!isEditingNote) return undefined;
 
         const handlePointerDownOutside = (event) => {
-            if (cardRef.current?.contains(event.target)) return;
+            if (itemRef.current?.contains(event.target)) return;
             handleNoteSave();
         };
 
@@ -123,14 +127,12 @@ const InspirationItem = ({
         onToggleComplete(idea.id, !isCompleted);
     };
 
-    // Long press (1 second) to enter edit mode (or just visual feedback in archive)
+    // Long press (1 second) to enter edit mode.
     const handlePointerDown = (e) => {
         // Only trigger on left click
         if (e.button !== 0) return;
 
-        setIsCharging(true);
         longPressTimer.current = setTimeout(() => {
-            setIsCharging(false);
             if (!isArchiveView) {
                 setIsEditingContent(true);
             }
@@ -143,7 +145,6 @@ const InspirationItem = ({
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
         }
-        setIsCharging(false);
     };
 
     // Content editing handlers
@@ -194,6 +195,21 @@ const InspirationItem = ({
         }
     };
 
+    const handleCopyContent = async () => {
+        const didCopy = await onCopy?.(idea.content, idea.id);
+        if (!didCopy) return;
+
+        if (copiedTimerRef.current) {
+            clearTimeout(copiedTimerRef.current);
+        }
+
+        setIsCopiedVisible(true);
+        copiedTimerRef.current = setTimeout(() => {
+            setIsCopiedVisible(false);
+            copiedTimerRef.current = null;
+        }, 2000);
+    };
+
     const x = useMotionValue(0);
     // Left swipe (delete) visual feedback
     const deleteBackgroundColor = useTransform(
@@ -213,7 +229,6 @@ const InspirationItem = ({
     const archiveIconOpacity = useTransform(x, [0, 80, 120], [0, 0, 1]);
     const archiveIconScale = useTransform(x, [0, 80, 150], [0.5, 0.5, 1.2]);
 
-    const y = useMotionValue(0);
     const exitAnimation = useMemo(() => {
         if (exitDirection === 'right') {
             return { opacity: 0, x: 500, rotate: 12, scale: 0.9, transition: { duration: 0.2, ease: "easeOut" } };
@@ -227,67 +242,62 @@ const InspirationItem = ({
 
     return (
         <motion.div
-            style={{ x }}
-            drag={isSelectionMode ? false : 'x'}
-            dragDirectionLock={!isSelectionMode}
-            dragConstraints={isSelectionMode ? undefined : { left: 0, right: 0 }}
-            dragElastic={isSelectionMode ? 0 : { right: 0.2, left: 0.2 }}
-            onDragStart={() => {
-                if (isSelectionMode) return;
-                setIsDragging(true);
-                cancelLongPress(); // Cancel long press when drag starts
-            }}
-            onDragEnd={(e, info) => {
-                if (isSelectionMode) return;
-                setIsDragging(false);
-                // Right swipe: Archive (or Restore in archive view)
-                if (info.offset.x > 150 || (info.velocity.x > 400 && info.offset.x > 50)) {
-                    if (isArchiveView) {
-                        // In Archive View, Right Swipe triggers Editing
-                        setIsEditingContent(true);
-                    } else {
-                        // In Normal View, Right Swipe triggers Archive
-                        setExitDirection('right');
-                        onArchive?.(idea.id);
-                    }
-                    return;
-                }
-                // Left swipe: Delete
-                if (info.offset.x < -200 || (info.velocity.x < -400 && info.offset.x < -50)) {
-                    setExitDirection('left');
-                    onRemove(idea.id);
-                }
-            }}
-            onPointerDown={(e) => {
-                if (isSelectionMode || isEditingNote) return;
-                handlePointerDown(e);
-            }}
-            onPointerUp={cancelLongPress}
-            onPointerCancel={cancelLongPress}
-            onPointerLeave={cancelLongPress}
-
+            ref={itemRef}
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{
-                opacity: 1,
-                y: 0,
-                scale: isCharging ? 1.03 : 1,
-                x: 0
-            }}
-            transition={{
-                x: { type: "spring", stiffness: 600, damping: 25 },
-                scale: { type: "spring", stiffness: 300, damping: 20 }
-            }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ opacity: { duration: 0.18 }, y: { duration: 0.18 } }}
             exit={exitAnimation}
-            layout
-            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isSelected ? 'scale-[1.005]' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
+            layout="position"
+            className={`relative mb-4 ${isEditingNote ? 'z-[80]' : ''}`}
         >
-            {/* Main Card Component */}
-            <div
-                ref={cardRef}
-                className={`
+            <motion.div
+                style={{ x }}
+                drag={isSelectionMode ? false : 'x'}
+                dragDirectionLock={!isSelectionMode}
+                dragConstraints={isSelectionMode ? undefined : { left: 0, right: 0 }}
+                dragElastic={isSelectionMode ? 0 : { right: 0.2, left: 0.2 }}
+                dragMomentum={false}
+                onDragStart={() => {
+                    if (isSelectionMode) return;
+                    setIsDragging(true);
+                    cancelLongPress(); // Cancel long press when drag starts
+                }}
+                onDragEnd={(e, info) => {
+                    if (isSelectionMode) return;
+                    setIsDragging(false);
+                    // Right swipe: Archive (or Restore in archive view)
+                    if (info.offset.x > 150 || (info.velocity.x > 400 && info.offset.x > 50)) {
+                        if (isArchiveView) {
+                            // In Archive View, Right Swipe triggers Editing
+                            setIsEditingContent(true);
+                        } else {
+                            // In Normal View, Right Swipe triggers Archive
+                            setExitDirection('right');
+                            onArchive?.(idea.id);
+                        }
+                        return;
+                    }
+                    // Left swipe: Delete
+                    if (info.offset.x < -200 || (info.velocity.x < -400 && info.offset.x < -50)) {
+                        setExitDirection('left');
+                        onRemove(idea.id);
+                    }
+                }}
+                onPointerDown={(e) => {
+                    if (isSelectionMode || isEditingNote) return;
+                    handlePointerDown(e);
+                }}
+                onPointerUp={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                className={`group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none`}
+            >
+                {/* Main Card Component */}
+                <div
+                    className={`
                     relative flex-1 bg-white dark:bg-gray-900 rounded-xl p-5 
                     border shadow-sm 
-                    transition-all duration-500 cursor-pointer active:scale-[0.99]
+                    transition-all duration-300 cursor-pointer
                     ${shouldHighlightExternalSource
                         ? 'border-cyan-300 dark:border-cyan-600 ring-1 ring-cyan-200/50 dark:ring-cyan-700/30'
                         : 'border-gray-100 dark:border-gray-800'}
@@ -304,7 +314,7 @@ const InspirationItem = ({
                         return;
                     }
                     if (!window.getSelection().toString()) {
-                        onCopy(idea.content, idea.id);
+                        handleCopyContent();
                     }
                 }}
                 onDoubleClick={(e) => {
@@ -355,7 +365,7 @@ const InspirationItem = ({
 
                 <div className="flex items-start gap-3">
                     {/* Color Status Dot - Click to Edit Note */}
-                    <div ref={noteEditorRef} className="flex-shrink-0 mt-1.5 relative z-10">
+                    <div className="flex-shrink-0 mt-1.5 relative z-10">
                         <button
                             type="button"
                             onClick={handleOpenNoteEditor}
@@ -513,38 +523,37 @@ const InspirationItem = ({
                 </div>
 
                 {/* Copied Indicator */}
-                <AnimatePresence>
-                    {copiedId === idea.id && (
-                        <motion.div
-                            key="copied-indicator"
-                            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                            className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-200/50 dark:shadow-pink-900/40 z-50 pointer-events-none"
-                        >
-                            <Check size={12} strokeWidth={3} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <motion.div
+                    initial={false}
+                    animate={isCopiedVisible
+                        ? { opacity: 1, scale: 1, y: 0 }
+                        : { opacity: 0, scale: 0.8, y: -10 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    aria-hidden={!isCopiedVisible}
+                    className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-200/50 dark:shadow-pink-900/40 z-50 pointer-events-none"
+                >
+                    <Check size={12} strokeWidth={3} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
+                </motion.div>
             </div>
 
             {/* Note Display - Outside the Card */}
             {
-                idea.note && (
+                idea.note && !isEditingNote && (
                     <button
                         type="button"
                         onClick={handleOpenNoteEditor}
                         onPointerDown={(e) => e.stopPropagation()}
                         className="w-full md:w-[160px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500 text-left"
                     >
-                        <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text`}>
+                        <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text hover:opacity-100 transition-opacity`}>
                             {idea.note}
                         </p>
                     </button>
                 )
             }
-        </motion.div >
+            </motion.div>
+        </motion.div>
     );
 };
 
