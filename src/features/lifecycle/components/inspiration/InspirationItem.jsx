@@ -40,6 +40,9 @@ const InspirationItem = ({
     const noteInputRef = React.useRef(null);
     const itemRef = React.useRef(null);
     const { t } = useTranslation();
+    const tapAnimation = !isSelectionMode && !isEditingContent && !isEditingNote
+        ? { scale: 0.992 }
+        : undefined;
 
     const categoryConfig = useMemo(
         () => getCategoryConfig(idea.category, categories),
@@ -293,7 +296,9 @@ const InspirationItem = ({
                 className={`group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none`}
             >
                 {/* Main Card Component */}
-                <div
+                <motion.div
+                    whileTap={tapAnimation}
+                    transition={{ type: 'spring', stiffness: 520, damping: 32, mass: 0.7 }}
                     className={`
                     relative flex-1 bg-white dark:bg-gray-900 rounded-xl p-5 
                     border shadow-sm 
@@ -535,7 +540,7 @@ const InspirationItem = ({
                     <Check size={12} strokeWidth={3} />
                     <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
                 </motion.div>
-            </div>
+            </motion.div>
 
             {/* Note Display - Outside the Card */}
             {
