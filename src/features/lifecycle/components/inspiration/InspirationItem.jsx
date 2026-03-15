@@ -39,6 +39,7 @@ const InspirationItem = ({
     const inputRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
     const noteInputRef = React.useRef(null);
+    const noteEditorRef = React.useRef(null);
     const cardRef = React.useRef(null);
     const { t } = useTranslation();
 
@@ -278,7 +279,7 @@ const InspirationItem = ({
             }}
             exit={exitAnimation}
             layout
-            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isSelected ? 'scale-[1.005]' : ''}`}
+            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isSelected ? 'scale-[1.005]' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
         >
             {/* Main Card Component */}
             <div
@@ -354,7 +355,7 @@ const InspirationItem = ({
 
                 <div className="flex items-start gap-3">
                     {/* Color Status Dot - Click to Edit Note */}
-                    <div className="flex-shrink-0 mt-1.5 relative z-10">
+                    <div ref={noteEditorRef} className="flex-shrink-0 mt-1.5 relative z-10">
                         <button
                             type="button"
                             onClick={handleOpenNoteEditor}
@@ -366,6 +367,54 @@ const InspirationItem = ({
                                 className={`w-2.5 h-2.5 rounded-full ${categoryConfig.dotColor} shadow-sm transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 hover:ring-pink-300/60 dark:hover:ring-pink-500/40 hover:ring-offset-white dark:hover:ring-offset-gray-900 ${isCompleted ? 'opacity-50' : ''}`}
                             />
                         </button>
+                        <AnimatePresence>
+                            {isEditingNote && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                                    className="absolute top-8 left-0 z-[90] w-[280px] max-w-[calc(100vw-3rem)] rounded-xl border border-pink-200 bg-white p-3 shadow-2xl shadow-pink-200/40 dark:border-pink-800 dark:bg-gray-900 dark:shadow-pink-950/30"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                >
+                                    <textarea
+                                        ref={noteInputRef}
+                                        value={noteDraft}
+                                        onChange={(e) => setNoteDraft(e.target.value)}
+                                        onKeyDown={handleNoteKeyDown}
+                                        placeholder={t('inspiration.notePlaceholder', '添加随记...')}
+                                        rows={3}
+                                        className="w-full resize-none rounded-lg border border-transparent bg-pink-50/90 px-3 py-2.5 text-sm leading-relaxed text-gray-700 outline-none placeholder:text-gray-400 min-h-[96px] dark:bg-pink-900/30 dark:text-gray-200"
+                                    />
+                                    <div className="mt-2 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                                            <span>⌘/Ctrl + Enter {t('common.save', '保存')}</span>
+                                            <span>·</span>
+                                            <span>Esc {t('common.cancel', '取消')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsEditingNote(false);
+                                                    setNoteDraft(idea.note || '');
+                                                }}
+                                                className="px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            >
+                                                {t('common.cancel', '取消')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleNoteSave}
+                                                className="rounded-full bg-pink-500 px-2.5 py-1 text-[11px] text-white transition-colors hover:bg-pink-600"
+                                            >
+                                                {t('common.save', '保存')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -392,54 +441,6 @@ const InspirationItem = ({
                                 {parsedContent}
                             </div>
                         )}
-                        <AnimatePresence initial={false}>
-                            {isEditingNote && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 6 }}
-                                    className="mt-3 rounded-xl border border-pink-200 dark:border-pink-800 bg-pink-50/80 dark:bg-pink-900/20 p-3"
-                                    onClick={(e) => e.stopPropagation()}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                >
-                                    <textarea
-                                        ref={noteInputRef}
-                                        value={noteDraft}
-                                        onChange={(e) => setNoteDraft(e.target.value)}
-                                        onKeyDown={handleNoteKeyDown}
-                                        placeholder={t('inspiration.notePlaceholder', '添加随记...')}
-                                        rows={3}
-                                        className="w-full px-3 py-2.5 text-sm leading-relaxed bg-white/80 dark:bg-gray-900/60 rounded-lg border border-transparent outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400 resize-none min-h-[96px]"
-                                    />
-                                    <div className="mt-2 flex items-center justify-between gap-3">
-                                        <div className="text-[9px] text-gray-400 flex items-center gap-2">
-                                            <span>⌘/Ctrl + Enter {t('common.save', '保存')}</span>
-                                            <span>·</span>
-                                            <span>Esc {t('common.cancel', '取消')}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setIsEditingNote(false);
-                                                    setNoteDraft(idea.note || '');
-                                                }}
-                                                className="px-2.5 py-1 text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                            >
-                                                {t('common.cancel', '取消')}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleNoteSave}
-                                                className="px-2.5 py-1 text-[11px] rounded-full bg-pink-500 text-white hover:bg-pink-600 transition-colors"
-                                            >
-                                                {t('common.save', '保存')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                         {isTodoView && showAiAssistControls && aiAssistOptions.length > 0 && (
                             <div
                                 className="mt-3 flex flex-wrap gap-1.5"
