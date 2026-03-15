@@ -116,9 +116,9 @@ const AuthModal = ({ isOpen, onClose }) => {
                     <h2 className="mb-1 text-xl font-medium text-gray-900">云端同步已启用</h2>
                     <p className="mb-5 text-sm text-gray-500">{user.email}</p>
 
-                    <div className="mb-6 flex items-center justify-center gap-3">
+                    <div className="mb-6 flex items-center justify-center gap-2.5">
                         <span className="text-xs font-medium tracking-[0.18em] text-gray-400">主题色</span>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-gray-100 bg-gray-50/85 px-2 py-2">
+                        <div className="flex items-center gap-2">
                             {accentThemeOptions.map((option) => {
                                 const isActive = accentTheme === option.id;
                                 return (
@@ -128,19 +128,16 @@ const AuthModal = ({ isOpen, onClose }) => {
                                         onClick={() => setAccentTheme(option.id)}
                                         title={option.label}
                                         aria-label={`切换到${option.label}主题`}
-                                        className="relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200"
+                                        className="relative h-6 w-6 rounded-full transition-all duration-200"
                                         style={{
-                                            backgroundColor: isActive ? 'var(--accent-soft-bg)' : '#ffffff',
-                                            border: isActive ? '1px solid var(--accent-border-strong)' : '1px solid #f1f5f9',
-                                            transform: isActive ? 'scale(1.04)' : 'scale(1)',
-                                            boxShadow: isActive ? '0 10px 22px -18px rgb(var(--accent-rgb) / 0.45)' : 'none',
+                                            backgroundColor: option.swatch,
+                                            opacity: isActive ? 1 : 0.72,
+                                            transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                                            boxShadow: isActive
+                                                ? '0 0 0 3px #ffffff, 0 0 0 4px rgba(148,163,184,0.24), 0 10px 18px -14px rgba(15,23,42,0.28)'
+                                                : '0 0 0 1px rgba(148,163,184,0.16)',
                                         }}
-                                    >
-                                        <span
-                                            className="h-4 w-4 rounded-full"
-                                            style={{ background: option.swatch }}
-                                        />
-                                    </button>
+                                    />
                                 );
                             })}
                         </div>
