@@ -124,8 +124,19 @@ const seoConfig = {
             normalizedPath = normalizedPath.slice(0, -1);
         }
 
+        if (normalizedPath.startsWith('/inspiration/c/')) {
+            normalizedPath = '/inspiration';
+        }
+
         const pageConfig = this.pages[normalizedPath];
-        return pageConfig?.[lang] || pageConfig?.[this.defaultLang] || this.site[lang] || this.site[this.defaultLang];
+        const siteConfig = this.site[lang] || this.site[this.defaultLang];
+
+        return pageConfig?.[lang]
+            || pageConfig?.[this.defaultLang]
+            || {
+                title: siteConfig?.defaultTitle || 'Light',
+                description: siteConfig?.defaultDescription || '',
+            };
     },
     getCanonicalUrl(path, lang) {
         const normalizedPath = path === '/' ? '' : path;

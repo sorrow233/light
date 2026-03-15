@@ -16,10 +16,12 @@ import Spotlight from '../../components/shared/Spotlight';
 import DataChartModal from './components/DataChartModal';
 import { useDataCenterStats, useChartData } from './hooks/useDataCenterData';
 import { INSPIRATION_CATEGORIES } from '../../utils/constants';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const DataCenterModule = () => {
     const { doc } = useSync();
     const { t } = useTranslation();
+    usePageTitle(t('navbar.data'));
     const [showChart, setShowChart] = useState(false);
 
     const { projects: allIdeas } = useSyncedProjects(doc, 'inspiration_items');

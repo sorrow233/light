@@ -7,9 +7,11 @@ import { useSync } from '../sync/SyncContext';
 import { useSyncedCategories, useSyncedProjects } from '../sync/useSyncStore';
 import InspirationItem from './components/inspiration/InspirationItem';
 import { INSPIRATION_CATEGORIES } from '../../utils/constants';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const InspirationArchiveModule = () => {
     const { t } = useTranslation();
+    usePageTitle(t('inspiration.archiveTitle', '灵感存档'));
     const navigate = useNavigate();
     const { doc, immediateSync } = useSync();
     const { projects: allIdeas, updateProject, removeProject } = useSyncedProjects(doc, 'inspiration_items');
