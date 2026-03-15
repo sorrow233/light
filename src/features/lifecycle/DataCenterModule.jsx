@@ -1,13 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     BarChart3,
-    Lightbulb,
-    Archive,
     Sparkles,
-    FolderTree,
-    CheckCheck,
-    CalendarDays
 } from 'lucide-react';
 import { useSync } from '../sync/SyncContext';
 import { useSyncedCategories, useSyncedProjects } from '../sync/useSyncStore';
@@ -17,6 +12,7 @@ import DataChartModal from './components/DataChartModal';
 import { useDataCenterStats, useChartData } from './hooks/useDataCenterData';
 import { INSPIRATION_CATEGORIES } from '../../utils/constants';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
 
 const DataCenterModule = () => {
     const { doc } = useSync();
@@ -32,7 +28,30 @@ const DataCenterModule = () => {
         { initializeDefaults: false, cleanupDuplicates: true }
     );
 
-    const stats = useDataCenterStats(allIdeas, categories);
+    const categoryConfigList = useMemo(() => {
+        const baseCategories = categories.length > 0 ? categories : INSPIRATION_CATEGORIES;
+        const uniqueMap = new Map();
+
+        baseCategories.forEach((category) => {
+            if (!category?.id || uniqueMap.has(category.id)) return;
+            uniqueMap.set(category.id, category);
+        });
+
+        return Array.from(uniqueMap.values()).map((category) => {
+            const defaultCategory = INSPIRATION_CATEGORIES.find((item) => item.id === category.id);
+            if (!defaultCategory) return category;
+
+            return {
+                ...defaultCategory,
+                ...category,
+                textColor: category.textColor || defaultCategory.textColor,
+                dotColor: category.dotColor || defaultCategory.dotColor,
+                color: category.color || defaultCategory.color,
+            };
+        });
+    }, [categories]);
+
+    const stats = useDataCenterStats(allIdeas, categoryConfigList);
     const chartData = useChartData(allIdeas);
 
     const containerVariants = {
@@ -114,89 +133,43 @@ const DataCenterModule = () => {
                 </motion.div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-pink-200 dark:hover:border-pink-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-pink-50 dark:bg-pink-900/20 rounded-xl">
-                                <Lightbulb className="w-4 h-4 text-pink-400" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-pink-500 dark:text-pink-400 mb-1">
-                                {stats.totalIdeas}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('navbar.inspiration')}
-                            </div>
-                        </div>
-                    </motion.div>
+                    {stats.categoryBreakdown.map((categoryStat) => {
+                        const accentHex = resolveCategoryAccentHex(categoryStat);
 
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-purple-200 dark:hover:border-purple-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                                <FolderTree className="w-4 h-4 text-purple-400" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-purple-500 dark:text-purple-400 mb-1">
-                                {stats.categoryCount}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('data.growingCount', '分类数')}
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-sky-200 dark:hover:border-sky-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-sky-50 dark:bg-sky-900/20 rounded-xl">
-                                <CalendarDays className="w-4 h-4 text-sky-400" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-sky-500 dark:text-sky-400 mb-1">
-                                {stats.thisWeekIdeas}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('data.blueprintCount', '本周新增')}
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-blue-200 dark:hover:border-blue-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                                <CheckCheck className="w-4 h-4 text-blue-500" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-blue-500 dark:text-blue-400 mb-1">
-                                {stats.completedTodoCount}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('navbar.writing', '已完成待办')}
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-amber-200 dark:hover:border-amber-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-                                <Archive className="w-4 h-4 text-amber-500" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-amber-500 dark:text-amber-400 mb-1">
-                                {stats.archivedIdeas}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('data.archivedIdeas', '归档条目')}
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div variants={cardVariants}>
-                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 md:p-5 text-center hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-all duration-300 hover:shadow-sm">
-                            <div className="mx-auto mb-3 w-10 h-10 flex items-center justify-center bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
-                                <Sparkles className="w-4 h-4 text-emerald-500" />
-                            </div>
-                            <div className="text-2xl md:text-3xl font-light text-emerald-500 dark:text-emerald-400 mb-1">
-                                {stats.todayIdeas}
-                            </div>
-                            <div className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 font-light uppercase tracking-wider">
-                                {t('data.today', '今日新增')}
-                            </div>
-                        </div>
-                    </motion.div>
+                        return (
+                            <motion.div key={categoryStat.id} variants={cardVariants}>
+                                <div
+                                    className="rounded-2xl border bg-white p-4 text-center transition-all duration-300 hover:shadow-sm dark:bg-gray-900 dark:border-gray-800"
+                                    style={{
+                                        borderColor: hexToRgba(accentHex, 0.18),
+                                        boxShadow: `0 18px 34px -32px ${hexToRgba(accentHex, 0.36)}`,
+                                    }}
+                                >
+                                    <div
+                                        className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl"
+                                        style={{ backgroundColor: hexToRgba(accentHex, 0.12) }}
+                                    >
+                                        <span
+                                            className="h-3.5 w-3.5 rounded-full"
+                                            style={{ backgroundColor: accentHex }}
+                                        />
+                                    </div>
+                                    <div
+                                        className="mb-1 text-2xl font-light md:text-3xl"
+                                        style={{ color: accentHex }}
+                                    >
+                                        {categoryStat.count}
+                                    </div>
+                                    <div className="text-[11px] font-medium text-gray-700 dark:text-gray-200">
+                                        {categoryStat.label}
+                                    </div>
+                                    <div className="mt-1 text-[10px] font-light uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                        {t('data.categoryShare', '占全部')} {categoryStat.share}%
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </motion.div>
 
