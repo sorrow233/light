@@ -146,12 +146,11 @@ const DataCenterModule = () => {
                                     }}
                                 >
                                     <div
-                                        className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl"
-                                        style={{ backgroundColor: hexToRgba(accentHex, 0.12) }}
-                                    />
-                                    <div
-                                        className="mb-1 text-2xl font-light md:text-3xl"
-                                        style={{ color: accentHex }}
+                                        className="mx-auto mb-3 inline-flex h-14 min-w-[3.5rem] items-center justify-center rounded-2xl px-3 text-2xl font-light tracking-tight md:text-3xl"
+                                        style={{
+                                            backgroundColor: hexToRgba(accentHex, 0.12),
+                                            color: accentHex,
+                                        }}
                                     >
                                         {categoryStat.count}
                                     </div>

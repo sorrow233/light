@@ -67,11 +67,7 @@ export const useDataCenterStats = (allIdeas = [], categories = []) => {
             .map((category) => ({
                 ...category,
                 share: ideas.length > 0 ? Math.round((category.count / safeTotalIdeas) * 100) : 0,
-            }))
-            .sort((left, right) => {
-                if (right.count !== left.count) return right.count - left.count;
-                return String(left.label || '').localeCompare(String(right.label || ''), 'zh-Hans-CN');
-            });
+            }));
 
         return {
             totalChars,
