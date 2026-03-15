@@ -26,11 +26,12 @@
             "purpose": "any maskable"
         }
     ],
-    "start_url": "/",
-    "display": "browser",
+    "start_url": "/inspiration",
+    "display": "standalone",
+    "scope": "/",
     "x-temp-display-backup": "standalone",
-    "background_color": "#fdf2f8",
-    "theme_color": "#fdf2f8",
+    "background_color": "#f8fafc",
+    "theme_color": "#f8fafc",
     "share_target": {
         "action": "/share-receiver",
         "method": "GET",

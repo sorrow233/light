@@ -5,9 +5,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>Flow Studio | AI-Native Development Environment</title>
+    <title>Light | Inspiration and data workspace</title>
     <meta name="description"
-        content="Orchestrate your AI development workflow with Flow Studio. From inspiration to deployment." />
+        content="Capture inspiration, organize notes, and sync your workspace across devices." />
 
     <!-- Favicons -->
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -19,17 +19,11 @@
     <!-- 深色模式主题色 -->
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
 
-    <script>
-        // 临时开关：强制 iOS 以浏览器模式运行，保留所有 standalone 相关代码，后续可一键恢复
-        window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ = true;
-    </script>
-
     <!-- iOS PWA Configuration -->
-    <!-- 临时设为 no：屏蔽 iOS 独立应用壳，避免从主屏图标进入 standalone -->
-    <meta name="apple-mobile-web-app-capable" content="no" />
-    <meta name="mobile-web-app-capable" content="no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Flow Studio" />
+    <meta name="apple-mobile-web-app-title" content="Light" />
 
     <!-- iOS Startup Image - 使用 SVG data URI，覆盖所有设备尺寸 -->
     <link rel="apple-touch-startup-image"
@@ -84,8 +78,8 @@
         rel="stylesheet">
 
     <style>
-        <style>@media (display-mode: standalone) {
-            /* 移除强制背景色，交给 React 应用控制 */
+        @media (display-mode: standalone) {
+            /* 交给 React 应用控制背景与布局 */
         }
     </style>
 
@@ -118,7 +112,7 @@
                 }
             }
         </style>
-        <img src="/apple-touch-icon.png" alt="Flow Studio" style="
+        <img src="/apple-touch-icon.png" alt="Light" style="
             width: 80px;
             height: 80px;
             border-radius: 18px;
@@ -134,7 +128,7 @@
             letter-spacing: 1px;
             opacity: 0;
             animation: fadeInUp 0.8s ease-out 0.2s forwards;
-        ">Flow Studio</div>
+        ">Light</div>
         <style>
             @keyframes breathe {
 
@@ -167,15 +161,13 @@
     <script>
         // 仅在 iOS/iPadOS standalone 模式下显示 Splash Screen
         (function () {
-            var forceBrowserMode = window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ === true;
             // 检测 iOS/iPadOS（新版 iPadOS 伪装成 Mac，需要特殊检测）
             var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             var isStandalone = window.navigator.standalone === true ||
                 window.matchMedia('(display-mode: standalone)').matches;
 
-            // 临时浏览器模式开启时，不执行 standalone 启动动画逻辑
-            if (!forceBrowserMode && isIOS && isStandalone) {
+            if (isIOS && isStandalone) {
                 var splash = document.getElementById('splash-screen');
                 if (splash) {
                     splash.style.display = 'flex';
@@ -220,14 +212,12 @@
 
     <script>
         (function () {
-            var forceBrowserMode = window.__FLOW_STUDIO_FORCE_BROWSER_MODE__ === true;
             var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             var isStandalone = window.navigator.standalone === true ||
                 window.matchMedia('(display-mode: standalone)').matches;
 
-            // 临时浏览器模式开启时，跳过 standalone 白屏恢复逻辑
-            if (!forceBrowserMode && isIOS && isStandalone) {
+            if (isIOS && isStandalone) {
                 document.addEventListener('visibilitychange', function () {
                     if (document.visibilityState === 'visible') {
                         // 页面重新可见时，检查是否需要恢复

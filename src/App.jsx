@@ -8,6 +8,7 @@ import { LanguageProvider } from './features/i18n';
 import { useIOSStandalone } from './hooks/useIOSStandalone';
 import RouteLoadingScreen from './components/shared/RouteLoadingScreen';
 import EmailLinkCompletionModal from './features/auth/EmailLinkCompletionModal';
+import IOSAddToHomePrompt from './features/pwa/IOSAddToHomePrompt';
 import { lazyWithRetry } from './utils/chunkLoadRecovery';
 import { version } from '../package.json';
 
@@ -68,6 +69,7 @@ function App() {
 
                     <ShortcutHelpModal />
                     <EmailLinkCompletionModal />
+                    {!isShareReceiverRoute && <IOSAddToHomePrompt />}
                 </div>
             </KeymapProvider>
         </LanguageProvider>

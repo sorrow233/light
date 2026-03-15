@@ -9,11 +9,13 @@ import './index.css'
 import { version } from '../package.json';
 
 import { ThemeProvider } from './hooks/ThemeContext';
+import { registerServiceWorker } from './features/pwa/registerServiceWorker';
 import { installChunkLoadRecovery } from './utils/chunkLoadRecovery';
 
 console.log(`Light v${version} loaded`);
 
 installChunkLoadRecovery(version);
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
