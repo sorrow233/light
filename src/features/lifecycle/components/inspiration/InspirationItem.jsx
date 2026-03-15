@@ -34,7 +34,6 @@ const InspirationItem = ({
     const [exitDirection, setExitDirection] = React.useState(null); // 'right' for archive, 'left' for delete
     const [contentDraft, setContentDraft] = React.useState(idea.content || '');
     const [noteDraft, setNoteDraft] = React.useState(idea.note || '');
-    const [isCharging, setIsCharging] = React.useState(false); // Visual feedback for long press
     const longPressTimer = React.useRef(null);
     const inputRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
@@ -123,14 +122,12 @@ const InspirationItem = ({
         onToggleComplete(idea.id, !isCompleted);
     };
 
-    // Long press (1 second) to enter edit mode (or just visual feedback in archive)
+    // Long press (1 second) to enter edit mode.
     const handlePointerDown = (e) => {
         // Only trigger on left click
         if (e.button !== 0) return;
 
-        setIsCharging(true);
         longPressTimer.current = setTimeout(() => {
-            setIsCharging(false);
             if (!isArchiveView) {
                 setIsEditingContent(true);
             }
@@ -143,7 +140,6 @@ const InspirationItem = ({
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
         }
-        setIsCharging(false);
     };
 
     // Content editing handlers
@@ -277,7 +273,7 @@ const InspirationItem = ({
                 x: { type: "spring", stiffness: 600, damping: 25 }
             }}
             exit={exitAnimation}
-            className={`relative group mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
+            className={`relative group mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isEditingNote ? 'z-[80]' : ''}`}
         >
             {/* Main Card Component */}
             <div
