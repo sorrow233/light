@@ -277,7 +277,7 @@ const InspirationItem = ({
                 x: { type: "spring", stiffness: 600, damping: 25 }
             }}
             exit={exitAnimation}
-            layout
+            layout="position"
             className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
         >
             {/* Main Card Component */}
@@ -510,21 +510,19 @@ const InspirationItem = ({
                     </div>
                 </div>
 
-                {/* Copied Indicator */}
-                <AnimatePresence>
-                    {copiedId === idea.id && (
-                        <motion.div
-                            key="copied-indicator"
-                            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                            className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-200/50 dark:shadow-pink-900/40 z-50 pointer-events-none"
-                        >
-                            <Check size={12} strokeWidth={3} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Keep the copied badge mounted so copy feedback never retriggers card layout animation. */}
+                <motion.div
+                    initial={false}
+                    animate={copiedId === idea.id
+                        ? { opacity: 1, scale: 1, y: 0 }
+                        : { opacity: 0, scale: 0.8, y: -10 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    aria-hidden={copiedId !== idea.id}
+                    className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-200/50 dark:shadow-pink-900/40 z-50 pointer-events-none"
+                >
+                    <Check size={12} strokeWidth={3} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
+                </motion.div>
             </div>
 
             {/* Note Display - Outside the Card */}
