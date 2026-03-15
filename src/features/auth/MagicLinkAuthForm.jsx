@@ -20,11 +20,7 @@ const MagicLinkAuthForm = ({ email, onEmailChange, onSubmit, loading, notice }) 
             </div>
 
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-emerald-700">
-                输入邮箱后，系统会发一封登录邮件给你。点开邮件里的链接，就能直接登录，不需要再记密码。
-            </div>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
-                邮件会尽量按你当前语言发送。如果它被误判进垃圾邮件，先点一次“这不是垃圾邮件”，后面通常会稳定很多。
+                发送后去邮箱点一下登录链接即可。收不到时先看看垃圾邮件。
             </div>
 
             {notice && (
