@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -8,11 +8,30 @@ import { LanguageProvider } from './features/i18n';
 import { useIOSStandalone } from './hooks/useIOSStandalone';
 import RouteLoadingScreen from './components/shared/RouteLoadingScreen';
 import EmailLinkCompletionModal from './features/auth/EmailLinkCompletionModal';
+import { lazyWithRetry } from './utils/chunkLoadRecovery';
+import { version } from '../package.json';
 
-const InspirationModule = lazy(() => import('./features/lifecycle/InspirationModule'));
-const InspirationArchiveModule = lazy(() => import('./features/lifecycle/InspirationArchiveModule'));
-const DataCenterModule = lazy(() => import('./features/lifecycle/DataCenterModule'));
-const ShareReceiver = lazy(() => import('./features/share/ShareReceiver'));
+const createRouteModule = (importer, contextName) => lazyWithRetry(importer, {
+    buildId: version,
+    contextName,
+});
+
+const InspirationModule = createRouteModule(
+    () => import('./features/lifecycle/InspirationModule'),
+    'route-inspiration'
+);
+const InspirationArchiveModule = createRouteModule(
+    () => import('./features/lifecycle/InspirationArchiveModule'),
+    'route-inspiration-archive'
+);
+const DataCenterModule = createRouteModule(
+    () => import('./features/lifecycle/DataCenterModule'),
+    'route-data-center'
+);
+const ShareReceiver = createRouteModule(
+    () => import('./features/share/ShareReceiver'),
+    'route-share-receiver'
+);
 
 function App() {
     const location = useLocation();
