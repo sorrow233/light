@@ -18,7 +18,6 @@ const InspirationItem = ({
     onUpdateContent,
     onToggleComplete,
     isArchiveView = false,
-    copiedId,
     isSelectionMode = false,
     isSelected = false,
     onSelect,
@@ -31,10 +30,12 @@ const InspirationItem = ({
     const [isDragging, setIsDragging] = React.useState(false);
     const [isEditingContent, setIsEditingContent] = React.useState(false);
     const [isEditingNote, setIsEditingNote] = React.useState(false);
+    const [isCopiedVisible, setIsCopiedVisible] = React.useState(false);
     const [exitDirection, setExitDirection] = React.useState(null); // 'right' for archive, 'left' for delete
     const [contentDraft, setContentDraft] = React.useState(idea.content || '');
     const [noteDraft, setNoteDraft] = React.useState(idea.note || '');
     const longPressTimer = React.useRef(null);
+    const copiedTimerRef = React.useRef(null);
     const inputRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
     const noteInputRef = React.useRef(null);
@@ -98,6 +99,12 @@ const InspirationItem = ({
             setNoteDraft(idea.note || '');
         }
     }, [idea.note, isEditingNote]);
+
+    React.useEffect(() => () => {
+        if (copiedTimerRef.current) {
+            clearTimeout(copiedTimerRef.current);
+        }
+    }, []);
 
     React.useEffect(() => {
         if (!isEditingNote) return undefined;
@@ -188,6 +195,21 @@ const InspirationItem = ({
         if (!isArchiveView) {
             setIsEditingNote(true);
         }
+    };
+
+    const handleCopyContent = async () => {
+        const didCopy = await onCopy?.(idea.content, idea.id);
+        if (!didCopy) return;
+
+        if (copiedTimerRef.current) {
+            clearTimeout(copiedTimerRef.current);
+        }
+
+        setIsCopiedVisible(true);
+        copiedTimerRef.current = setTimeout(() => {
+            setIsCopiedVisible(false);
+            copiedTimerRef.current = null;
+        }, 2000);
     };
 
     const x = useMotionValue(0);
@@ -298,7 +320,7 @@ const InspirationItem = ({
                         return;
                     }
                     if (!window.getSelection().toString()) {
-                        onCopy(idea.content, idea.id);
+                        handleCopyContent();
                     }
                 }}
                 onDoubleClick={(e) => {
@@ -521,11 +543,11 @@ const InspirationItem = ({
                 {/* Keep the copied badge mounted so copy feedback never retriggers card layout animation. */}
                 <motion.div
                     initial={false}
-                    animate={copiedId === idea.id
+                    animate={isCopiedVisible
                         ? { opacity: 1, scale: 1, y: 0 }
                         : { opacity: 0, scale: 0.8, y: -10 }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
-                    aria-hidden={copiedId !== idea.id}
+                    aria-hidden={!isCopiedVisible}
                     className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-200/50 dark:shadow-pink-900/40 z-50 pointer-events-none"
                 >
                     <Check size={12} strokeWidth={3} />
