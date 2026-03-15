@@ -48,7 +48,7 @@ const AuthModal = ({ isOpen, onClose }) => {
 
         try {
             const sentTo = await sendEmailLoginLink(email);
-            setNotice(`登录链接已经发到 ${sentTo}，打开邮箱里的邮件，点一下链接就能直接登录。`);
+            setNotice(`登录链接已经发到 ${sentTo}。请先看收件箱；如果被放进垃圾邮件，请点“这不是垃圾邮件”，后续送达会更稳定。`);
         } catch (currentError) {
             setError(normalizeAuthError(currentError));
         } finally {

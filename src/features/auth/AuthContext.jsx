@@ -18,6 +18,7 @@ import {
     getRememberedEmailLinkEmail,
     rememberEmailLinkEmail,
 } from './authEmailLink';
+import { applyPreferredAuthLanguage } from './authEmailLocale';
 import { normalizeAuthError } from './authMessages';
 import { normalizeAuthEmail } from './authEmailDomains';
 
@@ -69,6 +70,7 @@ export const AuthProvider = ({ children }) => {
             throw new Error('请输入邮箱后再发送登录链接。');
         }
 
+        applyPreferredAuthLanguage(auth);
         await sendSignInLinkToEmail(auth, normalizedEmail, buildEmailLinkActionSettings());
         rememberEmailLinkEmail(normalizedEmail);
         return normalizedEmail;
