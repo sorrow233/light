@@ -45,7 +45,10 @@ function App() {
     return (
         <LanguageProvider>
             <KeymapProvider>
-                <div className={`flex flex-col h-screen min-h-dvh h-dvh overflow-hidden bg-gray-50/50 dark:bg-gray-950 ${isIOSStandalone ? 'ios-standalone' : ''}`}>
+                <div
+                    className={`flex flex-col h-screen min-h-dvh h-dvh overflow-hidden ${isIOSStandalone ? 'ios-standalone' : ''}`}
+                    style={{ backgroundColor: 'var(--bg-secondary)' }}
+                >
                     <Toaster position="top-right" richColors />
                     {!isShareReceiverRoute && <Navbar />}
 

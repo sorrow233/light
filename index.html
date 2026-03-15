@@ -14,10 +14,40 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <!-- 浅色模式主题色 (Pink) -->
-    <meta name="theme-color" content="#fdf2f8" media="(prefers-color-scheme: light)" />
-    <!-- 深色模式主题色 -->
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+    <meta id="theme-color-meta" name="theme-color" content="#fdf2f8" />
+
+    <script>
+        (function () {
+            try {
+                var storedTheme = localStorage.getItem('light_theme');
+                var storedAccentTheme = localStorage.getItem('light_accent_theme') || 'pink';
+                var isDark = storedTheme === 'dark'
+                    || (storedTheme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+                var lightPalette = {
+                    pink: '#fdf2f8',
+                    sky: '#f5fbff',
+                };
+
+                var darkPalette = {
+                    pink: '#111827',
+                    sky: '#0d1724',
+                };
+
+                var palette = isDark ? darkPalette : lightPalette;
+                var browserChromeColor = palette[storedAccentTheme] || (isDark ? darkPalette.pink : lightPalette.pink);
+                var themeColorMeta = document.getElementById('theme-color-meta');
+
+                if (themeColorMeta) {
+                    themeColorMeta.setAttribute('content', browserChromeColor);
+                }
+
+                document.documentElement.style.backgroundColor = browserChromeColor;
+            } catch (error) {
+                console.warn('[Theme] Failed to set initial browser chrome color:', error);
+            }
+        })();
+    </script>
 
     <!-- iOS PWA Configuration -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

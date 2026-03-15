@@ -7,6 +7,7 @@ import {
     getAccentThemeCssVariables,
     normalizeAccentTheme,
 } from '../theme/accentTheme';
+import { updateBrowserChromeColor } from '../theme/browserChrome';
 
 const ThemeContext = createContext();
 const THEME_KEY = 'light_theme';
@@ -185,6 +186,7 @@ function ThemeProviderInner({ children }) {
 
         root.dataset.accentTheme = accentTheme;
         localStorage.setItem(ACCENT_THEME_KEY, accentTheme);
+        updateBrowserChromeColor(accentThemeVars['--bg-secondary']);
     }, [accentTheme, theme]);
 
     // 监听系统主题变化
