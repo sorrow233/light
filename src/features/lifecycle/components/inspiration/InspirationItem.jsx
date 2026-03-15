@@ -277,8 +277,7 @@ const InspirationItem = ({
                 x: { type: "spring", stiffness: 600, damping: 25 }
             }}
             exit={exitAnimation}
-            layout="position"
-            className={`relative group flex flex-col md:flex-row items-stretch md:items-start gap-2 md:gap-4 mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
+            className={`relative group mb-4 ${isSelectionMode ? 'touch-pan-y' : 'touch-none'} select-none ${isCharging ? 'ring-2 ring-pink-400/60 shadow-lg shadow-pink-200/50 dark:shadow-pink-900/30' : ''} ${isEditingNote ? 'z-[80]' : ''}`}
         >
             {/* Main Card Component */}
             <div
@@ -507,6 +506,19 @@ const InspirationItem = ({
                                 </button>
                             )}
                         </div>
+
+                        {idea.note && !isEditingNote && (
+                            <button
+                                type="button"
+                                onClick={handleOpenNoteEditor}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="mt-3 block w-full rounded-xl border border-pink-100/80 bg-pink-50/45 px-3 py-2 text-left transition-colors hover:border-pink-200 hover:bg-pink-50/80 dark:border-pink-900/50 dark:bg-pink-900/10 dark:hover:border-pink-800 dark:hover:bg-pink-900/20"
+                            >
+                                <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words`}>
+                                    {idea.note}
+                                </p>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -524,22 +536,6 @@ const InspirationItem = ({
                     <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.copied', 'Copied')}</span>
                 </motion.div>
             </div>
-
-            {/* Note Display - Outside the Card */}
-            {
-                idea.note && !isEditingNote && (
-                    <button
-                        type="button"
-                        onClick={handleOpenNoteEditor}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className="w-full md:w-[140px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500 text-left"
-                    >
-                        <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text hover:opacity-100 transition-opacity`}>
-                            {idea.note}
-                        </p>
-                    </button>
-                )
-            }
         </motion.div >
     );
 };
