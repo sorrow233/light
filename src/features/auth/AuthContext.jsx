@@ -3,7 +3,6 @@ import {
     isSignInWithEmailLink,
     onAuthStateChanged,
     signInWithEmailAndPassword,
-    sendSignInLinkToEmail,
     signInWithEmailLink,
     createUserWithEmailAndPassword,
     signOut,
@@ -12,15 +11,15 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import {
-    buildEmailLinkActionSettings,
     clearEmailLinkUrl,
     clearRememberedEmailLinkEmail,
     getRememberedEmailLinkEmail,
     rememberEmailLinkEmail,
 } from './authEmailLink';
-import { applyPreferredAuthLanguage } from './authEmailLocale';
+import { getPreferredAuthLanguageCode } from './authEmailLocale';
 import { normalizeAuthError } from './authMessages';
 import { normalizeAuthEmail } from './authEmailDomains';
+import { requestEmailLoginLink } from './authEmailRequest';
 
 const AuthContext = createContext({});
 const DEFAULT_EMAIL_LINK_STATE = {
@@ -70,8 +69,10 @@ export const AuthProvider = ({ children }) => {
             throw new Error('请输入邮箱后再发送登录链接。');
         }
 
-        applyPreferredAuthLanguage(auth);
-        await sendSignInLinkToEmail(auth, normalizedEmail, buildEmailLinkActionSettings());
+        await requestEmailLoginLink({
+            email: normalizedEmail,
+            language: getPreferredAuthLanguageCode(),
+        });
         rememberEmailLinkEmail(normalizedEmail);
         return normalizedEmail;
     }, []);

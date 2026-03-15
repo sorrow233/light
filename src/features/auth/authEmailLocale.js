@@ -11,11 +11,7 @@ function normalizeLanguageCode(language = '') {
     return 'en';
 }
 
-export function applyPreferredAuthLanguage(authInstance) {
-    if (!authInstance) {
-        return 'en';
-    }
-
+export function getPreferredAuthLanguageCode() {
     const savedLanguage = typeof window === 'undefined'
         ? ''
         : window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || '';
@@ -23,7 +19,15 @@ export function applyPreferredAuthLanguage(authInstance) {
         ? ''
         : navigator.language || navigator.userLanguage || '';
 
-    const preferredLanguage = normalizeLanguageCode(savedLanguage || browserLanguage);
+    return normalizeLanguageCode(savedLanguage || browserLanguage);
+}
+
+export function applyPreferredAuthLanguage(authInstance) {
+    if (!authInstance) {
+        return 'en';
+    }
+
+    const preferredLanguage = getPreferredAuthLanguageCode();
     authInstance.languageCode = preferredLanguage;
 
     return preferredLanguage;

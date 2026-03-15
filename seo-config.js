@@ -1,5 +1,5 @@
 const seoConfig = {
-    siteUrl: 'https://lighta.pages.dev',
+    siteUrl: 'https://light.catzz.work',
     defaultLang: 'zh',
     supportedLangs: ['zh', 'en', 'ja', 'ko'],
     langNames: {

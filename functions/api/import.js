@@ -9,7 +9,7 @@
  */
 
 const FIREBASE_PROJECT_ID = 'light-7b409';
-const APP_BASE_URL = 'https://lighta.pages.dev';
+const APP_BASE_URL = 'https://light.catzz.work';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
