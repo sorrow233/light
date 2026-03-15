@@ -116,12 +116,9 @@ const AuthModal = ({ isOpen, onClose }) => {
                     <h2 className="mb-1 text-xl font-medium text-gray-900">云端同步已启用</h2>
                     <p className="mb-5 text-sm text-gray-500">{user.email}</p>
 
-                    <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 text-left">
-                        <div className="mb-3">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">主题色</div>
-                            <p className="mt-1 text-xs text-gray-500">选择 Light 的主强调色，当前先支持粉色和淡蓝色。</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
+                    <div className="mb-6 flex items-center justify-center gap-3">
+                        <span className="text-xs font-medium tracking-[0.18em] text-gray-400">主题色</span>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-gray-100 bg-gray-50/85 px-2 py-2">
                             {accentThemeOptions.map((option) => {
                                 const isActive = accentTheme === option.id;
                                 return (
@@ -129,28 +126,20 @@ const AuthModal = ({ isOpen, onClose }) => {
                                         key={option.id}
                                         type="button"
                                         onClick={() => setAccentTheme(option.id)}
-                                        className={`rounded-2xl border px-3 py-3 text-left transition-all ${isActive
-                                            ? 'shadow-sm'
-                                            : 'hover:bg-white'
-                                            }`}
+                                        title={option.label}
+                                        aria-label={`切换到${option.label}主题`}
+                                        className="relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200"
                                         style={{
-                                            borderColor: isActive ? 'var(--accent-border-strong)' : '#e5e7eb',
                                             backgroundColor: isActive ? 'var(--accent-soft-bg)' : '#ffffff',
+                                            border: isActive ? '1px solid var(--accent-border-strong)' : '1px solid #f1f5f9',
+                                            transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                                            boxShadow: isActive ? '0 10px 22px -18px rgb(var(--accent-rgb) / 0.45)' : 'none',
                                         }}
                                     >
-                                        <div className="mb-2 flex items-center gap-2">
-                                            <span
-                                                className="h-3.5 w-3.5 rounded-full"
-                                                style={{ background: option.swatch }}
-                                            />
-                                            <span
-                                                className="text-sm font-medium"
-                                                style={{ color: isActive ? 'var(--accent-600)' : '#111827' }}
-                                            >
-                                                {option.label}
-                                            </span>
-                                        </div>
-                                        <div className="text-xs text-gray-500">{option.description}</div>
+                                        <span
+                                            className="h-4 w-4 rounded-full"
+                                            style={{ background: option.swatch }}
+                                        />
                                     </button>
                                 );
                             })}
