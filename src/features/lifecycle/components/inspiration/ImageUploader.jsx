@@ -147,9 +147,9 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
                 if (errorMsg.includes('whitelist')) {
                     errorMsg = '没有上传权限';
                 } else if (errorMsg.includes('Upload access token') || errorMsg.includes('membership')) {
-                    errorMsg = '请先在设置中激活图片上传权限';
+                    errorMsg = '请先在设置中开启同步上传权限并输入兑换码';
                 } else if (errorMsg.includes('Unauthorized')) {
-                    errorMsg = '当前账号还没有图片上传权限，请去设置里激活';
+                    errorMsg = '当前账号还没有同步上传权限，请去设置里开启';
                 } else if (errorMsg.includes('R2')) {
                     errorMsg = '存储服务异常，请稍后重试';
                 } else if (errorMsg.includes('configuration')) {

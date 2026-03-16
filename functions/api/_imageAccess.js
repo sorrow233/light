@@ -1,15 +1,9 @@
+import { MEMBERSHIP_KEY_HASH_SET } from './_membershipKeyHashes.js';
+
 const FIREBASE_WEB_API_KEY = 'AIzaSyCrwCk7d5msWwhavu_kni8wpR07Km0GjIQ';
 const TOKEN_SECRET = '57f911cc6cfb5e36b5386740f51dffb235cc4d08a54e9109da428b3fa7c70e70';
 const TOKEN_SCOPE = 'image_upload';
 const textEncoder = new TextEncoder();
-
-const MEMBER_KEY_HASHES = new Set([
-    'ab3abcddda390c86f8516bbe9b3df433d84288218d152d5dfa55bd705474656a',
-    '488f4009511b471467bd73030fe96d3b90a149610f430f0c4be1d70ec2ca74bf',
-    '3ac542c726296e1927528c72c643e5a52dca5078836cf9784cce41fb2051adfa',
-    'ee4b677939887536559b55fedf7dc6d35b0b6756da953d0addb7dcb299db17af',
-    '5bf8dc6ec03c0b816ff337650d1eecd69756e0c758c8aa9fe1e08d76033fb8a0',
-]);
 
 function normalizeValue(value) {
     return String(value || '').trim();
@@ -119,7 +113,7 @@ export async function isValidMembershipKey(rawKey) {
     if (!normalizedKey) return false;
 
     const keyHash = await sha256Hex(normalizedKey);
-    return MEMBER_KEY_HASHES.has(keyHash);
+    return MEMBERSHIP_KEY_HASH_SET.has(keyHash);
 }
 
 export async function issueImageAccessToken(userId) {

@@ -90,7 +90,7 @@ async function parseApiResponse(response) {
 
 export async function activateUploadAccess({ user, membershipKey }) {
     if (!user) {
-        throw new Error('请先登录再激活图片上传权限');
+        throw new Error('请先登录再激活同步上传权限');
     }
 
     const normalizedKey = String(membershipKey || '').trim().toUpperCase();
