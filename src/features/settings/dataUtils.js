@@ -1,6 +1,12 @@
 import * as Y from 'yjs';
 
 const EXPORT_VERSION = '4.0';
+const SENSITIVE_USER_PREFERENCE_KEYS = new Set([
+    'imageUploadAccessToken',
+    'imageUploadAccessOwnerId',
+    'imageUploadAccessActivatedAt',
+    'imageUploadAccessEnabled',
+]);
 
 const toYMap = (value) => {
     const yMap = new Y.Map();
@@ -72,9 +78,19 @@ const extractImportedCategories = (data) => {
     return [];
 };
 
+const sanitizeUserPreferencesForTransfer = (preferences) => {
+    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) {
+        return {};
+    }
+
+    return Object.fromEntries(
+        Object.entries(preferences).filter(([key]) => !SENSITIVE_USER_PREFERENCE_KEYS.has(key))
+    );
+};
+
 const extractImportedPreferences = (data) => {
     if (data?.userPreferences && typeof data.userPreferences === 'object' && !Array.isArray(data.userPreferences)) {
-        return data.userPreferences;
+        return sanitizeUserPreferencesForTransfer(data.userPreferences);
     }
 
     return {};
@@ -134,7 +150,7 @@ export const exportAllData = (doc) => {
     }
 
     try {
-        data.data.userPreferences = doc.getMap('user_preferences').toJSON();
+        data.data.userPreferences = sanitizeUserPreferencesForTransfer(doc.getMap('user_preferences').toJSON());
     } catch (error) {
         console.warn('[Export] Failed to export user_preferences:', error);
     }
@@ -190,7 +206,7 @@ export const validateImportData = (payload) => {
     const hasSupportedPayload = [
         Array.isArray(inspirationItems) && inspirationItems.length > 0,
         Array.isArray(inspirationCategories) && inspirationCategories.length > 0,
-        userPreferences && typeof userPreferences === 'object' && Object.keys(userPreferences).length > 0,
+        sanitizeUserPreferencesForTransfer(userPreferences) && Object.keys(sanitizeUserPreferencesForTransfer(userPreferences)).length > 0,
         Array.isArray(allProjects) && allProjects.length > 0,
         Array.isArray(inspirations) && inspirations.length > 0,
     ].some(Boolean);

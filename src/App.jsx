@@ -9,6 +9,7 @@ import { useIOSStandalone } from './hooks/useIOSStandalone';
 import RouteLoadingScreen from './components/shared/RouteLoadingScreen';
 import EmailLinkCompletionModal from './features/auth/EmailLinkCompletionModal';
 import IOSAddToHomePrompt from './features/pwa/IOSAddToHomePrompt';
+import UploadAccessSyncBridge from './features/settings/components/UploadAccessSyncBridge';
 import { lazyWithRetry } from './utils/chunkLoadRecovery';
 import { version } from '../package.json';
 
@@ -49,6 +50,7 @@ function App() {
                     className={`flex flex-col h-screen min-h-dvh h-dvh overflow-hidden ${isIOSStandalone ? 'ios-standalone' : ''}`}
                     style={{ backgroundColor: 'var(--bg-secondary)' }}
                 >
+                    <UploadAccessSyncBridge />
                     <Toaster position="top-right" richColors />
                     {!isShareReceiverRoute && <Navbar />}
 

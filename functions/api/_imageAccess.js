@@ -188,7 +188,14 @@ export async function authorizeImageAccess(request, env) {
         };
     }
 
-    if (rawUserId && rawUserId !== payload.uid) {
+    if (!rawUserId) {
+        return {
+            authorized: false,
+            reason: 'Unauthorized: Current user id missing',
+        };
+    }
+
+    if (rawUserId !== payload.uid) {
         return {
             authorized: false,
             reason: 'Unauthorized: Upload access token does not match current user',
