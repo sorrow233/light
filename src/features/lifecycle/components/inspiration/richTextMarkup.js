@@ -15,12 +15,16 @@ const escapeHtml = (text) => String(text || '')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
+export const normalizeClipboardText = (text) => String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00a0/g, ' ');
+
 const serializeRichTextChildren = (node) => {
     let result = '';
 
     node.childNodes.forEach((childNode, index) => {
         if (childNode.nodeType === Node.TEXT_NODE) {
-            result += childNode.textContent;
+            result += normalizeClipboardText(childNode.textContent);
             return;
         }
 
@@ -69,6 +73,86 @@ const serializeRichTextChildren = (node) => {
 export const htmlToMarkup = (element) => {
     if (!element) return '';
     return serializeRichTextChildren(element);
+};
+
+const countLineBreaks = (text) => (text.match(/\n/g) || []).length;
+
+const extractPlainTextWithBoldRanges = (markup) => {
+    let plainText = '';
+    const boldRanges = [];
+
+    for (let index = 0; index < markup.length;) {
+        if (markup.startsWith('**', index)) {
+            const endIndex = markup.indexOf('**', index + 2);
+            if (endIndex !== -1) {
+                const boldText = markup.slice(index + 2, endIndex);
+                const start = plainText.replace(/\n/g, '').length;
+                plainText += boldText;
+                const end = plainText.replace(/\n/g, '').length;
+                boldRanges.push({ start, end });
+                index = endIndex + 2;
+                continue;
+            }
+        }
+
+        if (markup.startsWith('#!', index)) {
+            const colorMatch = markup.slice(index).match(/^#!([^:]+):([^#]+)#/);
+            if (colorMatch) {
+                plainText += colorMatch[2];
+                index += colorMatch[0].length;
+                continue;
+            }
+        }
+
+        plainText += markup[index];
+        index += 1;
+    }
+
+    return { plainText, boldRanges };
+};
+
+export const mergeMarkupWithPlainTextLineBreaks = (markup, plainText) => {
+    const normalizedPlainText = normalizeClipboardText(plainText);
+    if (!normalizedPlainText || !markup) return markup;
+    if (!markup.includes('**') && !markup.includes('#!')) return normalizedPlainText;
+    if (countLineBreaks(normalizedPlainText) <= countLineBreaks(markup)) return markup;
+
+    const { plainText: markupPlainText, boldRanges } = extractPlainTextWithBoldRanges(markup);
+    const collapsedMarkupText = normalizeClipboardText(markupPlainText).replace(/\n/g, '');
+    const collapsedPlainText = normalizedPlainText.replace(/\n/g, '');
+
+    if (!collapsedMarkupText || collapsedMarkupText !== collapsedPlainText) {
+        return markup;
+    }
+
+    const openPositions = new Set(boldRanges.map((range) => range.start));
+    const closePositions = new Set(boldRanges.map((range) => range.end));
+
+    let result = '';
+    let collapsedIndex = 0;
+    for (const char of normalizedPlainText) {
+        if (char !== '\n') {
+            if (openPositions.has(collapsedIndex)) {
+                result += '**';
+            }
+
+            result += char;
+            collapsedIndex += 1;
+
+            if (closePositions.has(collapsedIndex)) {
+                result += '**';
+            }
+            continue;
+        }
+
+        result += char;
+    }
+
+    if (closePositions.has(collapsedIndex) && !result.endsWith('**')) {
+        result += '**';
+    }
+
+    return result;
 };
 
 export const markupToHtml = (text) => {

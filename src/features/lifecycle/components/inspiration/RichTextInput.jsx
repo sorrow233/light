@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { COLOR_CONFIG } from './InspirationUtils';
-import { htmlToMarkup, markupToHtml } from './richTextMarkup';
+import { htmlToMarkup, markupToHtml, mergeMarkupWithPlainTextLineBreaks } from './richTextMarkup';
 
 /**
  * 富文本输入框组件 - 使用 contenteditable 实现真正的富文本编辑
@@ -134,7 +134,9 @@ const RichTextInput = forwardRef(({
             const tempContainer = document.createElement('div');
             tempContainer.innerHTML = html;
             const markup = htmlToMarkup(tempContainer);
-            document.execCommand('insertHTML', false, markupToHtml(markup));
+            const plainText = e.clipboardData.getData('text/plain');
+            const mergedMarkup = mergeMarkupWithPlainTextLineBreaks(markup, plainText);
+            document.execCommand('insertHTML', false, markupToHtml(mergedMarkup));
             requestAnimationFrame(handleInput);
             return;
         }
