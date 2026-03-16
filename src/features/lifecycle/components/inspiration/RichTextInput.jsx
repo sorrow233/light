@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { COLOR_CONFIG } from './InspirationUtils';
+import { htmlToMarkup, markupToHtml } from './richTextMarkup';
 
 /**
  * 富文本输入框组件 - 使用 contenteditable 实现真正的富文本编辑
@@ -99,56 +100,6 @@ const RichTextInput = forwardRef(({
         getElement: () => editorRef.current,
     }));
 
-    // 将 HTML 转换为带标记的纯文本 (用于存储)
-    const htmlToMarkup = useCallback((element) => {
-        if (!element) return '';
-
-        let result = '';
-        element.childNodes.forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                result += node.textContent;
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                if (node.tagName === 'BR') {
-                    result += '\n';
-                } else if (node.classList?.contains('colored-text')) {
-                    const colorId = node.dataset.colorId;
-                    // 重要：提取纯文本内容，避免嵌套标记
-                    const innerText = node.textContent;
-                    result += `#!${colorId}:${innerText}#`;
-                } else if (node.tagName === 'DIV') {
-                    // DIV 通常表示新行
-                    const inner = htmlToMarkup(node);
-                    if (result && !result.endsWith('\n')) {
-                        result += '\n';
-                    }
-                    result += inner;
-                } else {
-                    result += htmlToMarkup(node);
-                }
-            }
-        });
-        return result;
-    }, []);
-
-    // 将带标记的纯文本转换为 HTML
-    const markupToHtml = useCallback((text) => {
-        if (!text) return '';
-
-        // 处理颜色标记
-        let html = text
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/#!([^:]+):([^#]+)#/g, (match, colorId, content) => {
-                const colorConfig = COLOR_CONFIG.find(c => c.id === colorId);
-                const highlightColor = colorConfig?.highlight || 'rgba(167, 139, 250, 0.5)';
-                const style = `background: radial-gradient(ellipse 100% 40% at center 80%, ${highlightColor} 0%, ${highlightColor} 70%, transparent 100%); padding: 0 0.15em;`;
-                return `<span class="colored-text relative inline" data-color-id="${colorId}" style="${style}">${content}</span>`;
-            })
-            .replace(/\n/g, '<br>');
-
-        return html;
-    }, []);
-
     // 处理输入事件
     const handleInput = useCallback(() => {
         if (!editorRef.current) return;
@@ -177,20 +128,38 @@ const RichTextInput = forwardRef(({
     // 处理粘贴 - 将纯文本中的标记转换为 HTML 效果
     const handlePaste = useCallback((e) => {
         e.preventDefault();
+
+        const html = e.clipboardData.getData('text/html');
+        if (html) {
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = html;
+            const markup = htmlToMarkup(tempContainer);
+            document.execCommand('insertHTML', false, markupToHtml(markup));
+            requestAnimationFrame(handleInput);
+            return;
+        }
+
         const text = e.clipboardData.getData('text/plain');
         // 如果包含标记，则通过 markupToHtml 转换并插入 HTML
-        if (text.includes('#!') || text.includes('\n')) {
-            const html = markupToHtml(text);
-            document.execCommand('insertHTML', false, html);
+        if (text.includes('#!') || text.includes('**') || text.includes('\n')) {
+            document.execCommand('insertHTML', false, markupToHtml(text));
+            requestAnimationFrame(handleInput);
         } else {
             document.execCommand('insertText', false, text);
         }
-    }, [markupToHtml]);
+    }, [handleInput]);
 
     // 处理按键
     const handleKeyDownInternal = useCallback((e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            document.execCommand('bold', false);
+            handleInput();
+            return;
+        }
+
         onKeyDown?.(e);
-    }, [onKeyDown]);
+    }, [handleInput, onKeyDown]);
 
     // 处理输入法开始/结束
     const handleCompositionStart = () => { isComposing.current = true; };
