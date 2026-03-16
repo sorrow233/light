@@ -17,6 +17,17 @@ const RichTextInput = forwardRef(({
 }, ref) => {
     const editorRef = useRef(null);
     const isComposing = useRef(false);
+    const lastSelectionRef = useRef(null);
+
+    const captureSelection = useCallback(() => {
+        const selection = window.getSelection();
+        if (!selection?.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        if (!editorRef.current?.contains(range.commonAncestorContainer)) return;
+
+        lastSelectionRef.current = range.cloneRange();
+    }, []);
 
     // 暴露方法给父组件
     useImperativeHandle(ref, () => ({
@@ -27,14 +38,29 @@ const RichTextInput = forwardRef(({
             if (sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
                 return sel.getRangeAt(0);
             }
-            return null;
+            return lastSelectionRef.current;
         },
         // 应用颜色到选中文本
         applyColor: (colorId) => {
             const sel = window.getSelection();
-            if (!sel.rangeCount || sel.isCollapsed) return false;
+            let range = null;
 
-            const range = sel.getRangeAt(0);
+            if (sel?.rangeCount) {
+                const liveRange = sel.getRangeAt(0);
+                if (editorRef.current?.contains(liveRange.commonAncestorContainer)) {
+                    range = liveRange;
+                }
+            }
+
+            if (!range && lastSelectionRef.current) {
+                range = lastSelectionRef.current.cloneRange();
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+
+            if (!range || range.isCollapsed) return false;
             if (!editorRef.current?.contains(range.commonAncestorContainer)) return false;
 
             const colorConfig = COLOR_CONFIG.find(c => c.id === colorId);
@@ -79,6 +105,7 @@ const RichTextInput = forwardRef(({
                 newRange.setStartAfter(coloredSpan);
                 newRange.collapse(true);
                 sel.addRange(newRange);
+                lastSelectionRef.current = newRange.cloneRange();
 
                 // 触发内容改变
                 handleInput();
@@ -124,6 +151,15 @@ const RichTextInput = forwardRef(({
             editorRef.current.innerHTML = markupToHtml(value || '');
         }
     }, [value, htmlToMarkup, markupToHtml]);
+
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            captureSelection();
+        };
+
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    }, [captureSelection]);
 
     // 处理粘贴 - 将纯文本中的标记转换为 HTML 效果
     const handlePaste = useCallback((e) => {
@@ -178,6 +214,9 @@ const RichTextInput = forwardRef(({
             className={className}
             style={style}
             onInput={handleInput}
+            onMouseUp={captureSelection}
+            onKeyUp={captureSelection}
+            onFocus={captureSelection}
             onKeyDown={handleKeyDownInternal}
             onPaste={handlePaste}
             onCompositionStart={handleCompositionStart}

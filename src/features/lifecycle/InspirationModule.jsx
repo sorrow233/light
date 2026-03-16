@@ -1518,6 +1518,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                             {COLOR_CONFIG.map((conf, index) => (
                                                 <button
                                                     key={conf.id}
+                                                    onMouseDown={(e) => e.preventDefault()}
                                                     onClick={() => handleColorClick(index)}
                                                     className={`relative w-3 h-3 rounded-full transition-all duration-300 ${conf.dot} ${index === selectedColorIndex ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 ring-gray-400 dark:ring-gray-500 scale-110' : 'opacity-40 hover:opacity-100 hover:scale-110'} after:absolute after:-inset-2`}
                                                     title={conf.id}
