@@ -19,7 +19,6 @@ import CategoryManager from './components/inspiration/CategoryManager';
 import ImageUploader from './components/inspiration/ImageUploader';
 import InspirationCategorySelector from './components/inspiration/InspirationCategorySelector';
 import AiTodoImportModal from './components/inspiration/AiTodoImportModal';
-import { deleteImagesInContent } from './services/imageService';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import {
     buildCategoryExportText,
@@ -163,7 +162,6 @@ const InspirationModule = () => {
     const [copiedId, setCopiedId] = useState(null);
     const [showWeekSelector, setShowWeekSelector] = useState(false);
     const [deletedIdeas, setDeletedIdeas] = useState([]);
-    const [archiveShake, setArchiveShake] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(() => routeCategoryId || DEFAULT_INSPIRATION_CATEGORY_ID); // 分类状态
     const [isSelectionMode, setIsSelectionMode] = useState(false); // 多选模式
     const [selectedIdeaIds, setSelectedIdeaIds] = useState([]); // 已选中的 ID
@@ -314,10 +312,7 @@ const InspirationModule = () => {
         const confirmed = window.confirm(`确认删除已选 ${selectedIdeas.length} 项吗？可在 5 秒内撤销。`);
         if (!confirmed) return;
 
-        setDeletedIdeas((prev) => [
-            ...prev,
-            ...selectedIdeas.map((idea) => ({ ...idea, wasArchived: false })),
-        ]);
+        setDeletedIdeas((prev) => [...prev, ...selectedIdeas]);
 
         selectedIdeas.forEach((idea) => {
             removeProjectBase(idea.id);
@@ -489,40 +484,15 @@ const InspirationModule = () => {
     const handleRemove = useCallback((id) => {
         const idea = ideas.find(i => i.id === id);
         if (idea) {
-            setDeletedIdeas(prev => [...prev, { ...idea, wasArchived: false }]);
+            setDeletedIdeas(prev => [...prev, idea]);
             removeIdea(id);
-
-            // 自动删除 R2 图片功能已关闭（避免误删）
-            // 如需启用，取消下面的注释
-            // if (user?.uid && idea.content) {
-            //     deleteImagesInContent(idea.content, user.uid).catch(err => {
-            //         console.warn('Failed to delete images:', err);
-            //     });
-            // }
         }
     }, [ideas, removeIdea]);
-
-    const handleArchive = useCallback((id) => {
-        const idea = ideas.find(i => i.id === id);
-        if (idea) {
-            setDeletedIdeas(prev => [...prev, { ...idea, wasArchived: true }]);
-            updateIdea(id, { stage: 'archive', archiveTimestamp: Date.now() });
-            // Trigger header shake
-            setArchiveShake(true);
-            setTimeout(() => setArchiveShake(false), 500);
-        }
-    }, [ideas, updateIdea]);
 
     const handleUndo = () => {
         if (deletedIdeas.length > 0) {
             const lastDeleted = deletedIdeas[deletedIdeas.length - 1];
-            if (lastDeleted.wasArchived) {
-                // Restore from archive
-                updateIdea(lastDeleted.id, { stage: 'inspiration' });
-            } else {
-                // Restore deleted
-                addIdea(lastDeleted);
-            }
+            addIdea(lastDeleted);
             setDeletedIdeas(prev => prev.slice(0, -1));
         }
     };
@@ -1404,19 +1374,8 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
             <div className="mb-14 text-center md:text-left">
                 <motion.div
                     className="inline-flex items-center justify-center md:justify-start gap-2 mb-3"
-                    animate={archiveShake ? {
-                        x: [0, -4, 4, -4, 4, 0],
-                        scale: [1, 1.05, 1],
-                    } : {}}
-                    transition={{ duration: 0.4 }}
                 >
-                    <motion.div
-                        className="p-2 rounded-xl accent-surface"
-                        animate={archiveShake ? {
-                            scale: [1, 1.2, 1],
-                        } : {}}
-                        transition={{ duration: 0.4 }}
-                    >
+                    <motion.div className="p-2 rounded-xl accent-surface">
                         <Lightbulb className="w-5 h-5 accent-text-soft" />
                     </motion.div>
                     <h2
@@ -1674,8 +1633,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                 key={idea.id}
                                                                 idea={idea}
                                                                 categories={categoryConfigList}
-                                                                onRemove={handleRemove}
-                                                                onArchive={handleArchive}
+                                                                onDelete={handleRemove}
                                                                 onCopy={handleCopy}
                                                                 onUpdateColor={handleUpdateColor}
                                                                 onUpdateNote={handleUpdateNote}
@@ -1704,8 +1662,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                             key={idea.id}
                                                             idea={idea}
                                                             categories={categoryConfigList}
-                                                            onRemove={handleRemove}
-                                                            onArchive={handleArchive}
+                                                            onDelete={handleRemove}
                                                             onCopy={handleCopy}
                                                             onUpdateColor={handleUpdateColor}
                                                             onUpdateNote={handleUpdateNote}
@@ -1748,8 +1705,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                                                                     key={idea.id}
                                                                     idea={idea}
                                                                     categories={categoryConfigList}
-                                                                    onRemove={handleRemove}
-                                                                    onArchive={handleArchive}
+                                                                    onDelete={handleRemove}
                                                                     onCopy={handleCopy}
                                                                     onUpdateColor={handleUpdateColor}
                                                                     onUpdateNote={handleUpdateNote}
@@ -1799,9 +1755,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                             className="fixed bottom-24 left-6 right-6 md:bottom-10 md:left-auto md:right-10 md:w-auto bg-pink-50 dark:bg-pink-900 text-pink-900 dark:text-pink-50 px-6 py-3 rounded-xl shadow-2xl shadow-pink-100 dark:shadow-pink-900/20 border border-pink-100 dark:border-pink-800 flex items-center justify-between md:justify-start gap-4 z-50"
                         >
                             <span className="text-sm font-medium">
-                                {deletedIdeas[deletedIdeas.length - 1]?.wasArchived
-                                    ? t('inspiration.ideaArchived', '已归档')
-                                    : t('inspiration.ideaDeleted')}
+                                {t('inspiration.ideaDeleted')}
                                 {deletedIdeas.length > 1 && <span className="ml-1 opacity-70">({deletedIdeas.length})</span>}
                             </span>
                             <button

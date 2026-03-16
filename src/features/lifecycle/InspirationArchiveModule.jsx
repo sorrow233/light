@@ -124,8 +124,8 @@ const InspirationArchiveModule = () => {
                                 key={idea.id}
                                 idea={idea}
                                 categories={categories}
-                                onRemove={handleDelete}
-                                onArchive={handleRestore} // Right swipe restores in archive view
+                                onDelete={handleDelete}
+                                onRestore={handleRestore}
                                 onCopy={handleCopy}
                                 onToggleComplete={(id, completed) => {
                                     updateProject(id, { completed });

@@ -219,11 +219,13 @@ const InspirationItem = forwardRef(({
         }
 
         if (action.id === SWIPE_ACTION_IDS.delete) {
-            return onDelete?.(idea.id) !== false;
+            if (!onDelete) return false;
+            return onDelete(idea.id) !== false;
         }
 
         if (action.id === SWIPE_ACTION_IDS.restore) {
-            return onRestore?.(idea.id) !== false;
+            if (!onRestore) return false;
+            return onRestore(idea.id) !== false;
         }
 
         return false;
