@@ -1,17 +1,23 @@
 import React, { forwardRef, useCallback, useMemo } from 'react';
-import { Trash2, Check, Pencil, RotateCcw } from 'lucide-react';
+import { Check, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useTranslation } from '../../../i18n';
 import RichTextInput from './RichTextInput';
 import { parseRichText, getCategoryConfig } from './InspirationUtils';
+import { buildIdeaCopyPayload } from './ideaClipboardUtils';
+import {
+    getInspirationSwipeActions,
+    shouldTriggerSwipeAction,
+    SWIPE_ACTION_IDS,
+} from './swipeActionConfig';
 
 // parseRichText/getCategoryConfig are imported from InspirationUtils.js
 
 const InspirationItem = forwardRef(({
     idea,
     categories = [],
-    onRemove,
-    onArchive,
+    onDelete,
+    onRestore,
     onCopy,
     onUpdateColor,
     onUpdateNote,
@@ -31,12 +37,11 @@ const InspirationItem = forwardRef(({
     const [isDragging, setIsDragging] = React.useState(false);
     const [isEditingContent, setIsEditingContent] = React.useState(false);
     const [isEditingNote, setIsEditingNote] = React.useState(false);
-    const [exitDirection, setExitDirection] = React.useState(null); // 'right' for archive, 'left' for delete
+    const [exitDirection, setExitDirection] = React.useState(null);
     const [contentDraft, setContentDraft] = React.useState(idea.content || '');
     const [noteDraft, setNoteDraft] = React.useState(idea.note || '');
     const [isCharging, setIsCharging] = React.useState(false); // Visual feedback for long press
     const longPressTimer = React.useRef(null);
-    const inputRef = React.useRef(null);
     const contentTextareaRef = React.useRef(null);
     const noteInputRef = React.useRef(null);
     const { t } = useTranslation();
@@ -47,9 +52,21 @@ const InspirationItem = forwardRef(({
     );
     const isCompleted = idea.completed || false;
     const shouldHighlightExternalSource = Boolean(idea.source && !['user', 'ai-import'].includes(idea.source));
+    const swipeActions = useMemo(
+        () => getInspirationSwipeActions({ isArchiveView }),
+        [isArchiveView]
+    );
+
+    const ideaCopyPayload = useMemo(
+        () => buildIdeaCopyPayload(idea),
+        [idea.content, idea.note]
+    );
 
     // 缓存 parseRichText 计算结果，避免每次渲染都重新执行正则匹配
-    const parsedContent = useMemo(() => parseRichText(idea.content), [idea.content]);
+    const parsedContent = useMemo(
+        () => parseRichText(idea.content, ideaCopyPayload.textWithoutImages),
+        [idea.content, ideaCopyPayload.textWithoutImages]
+    );
 
     const getAiAssistButtonClass = useCallback((value, isActive) => {
         if (!isActive) {
@@ -175,25 +192,43 @@ const InspirationItem = forwardRef(({
     };
 
     const x = useMotionValue(0);
-    // Left swipe (delete) visual feedback
-    const deleteBackgroundColor = useTransform(
+    const leftSwipeBackgroundColor = useTransform(
         x,
-        [0, -80, -200],
-        ['rgba(252, 231, 243, 0)', 'rgba(252, 231, 243, 0.8)', 'rgba(239, 68, 68, 1)']
+        swipeActions.left.motionRange,
+        swipeActions.left.backgroundColors
     );
-    const deleteIconOpacity = useTransform(x, [0, -80, -150], [0, 0, 1]);
-    const deleteIconScale = useTransform(x, [0, -80, -200], [0.5, 0.5, 1.2]);
-
-    // Right swipe (archive/restore) visual feedback
-    const archiveBackgroundColor = useTransform(
+    const leftSwipeIconOpacity = useTransform(x, swipeActions.left.iconOpacityRange, [0, 0, 1]);
+    const leftSwipeIconScale = useTransform(x, swipeActions.left.iconScaleRange, [0.5, 0.5, 1.2]);
+    const rightSwipeBackgroundColor = useTransform(
         x,
-        [0, 80, 150],
-        ['rgba(252, 231, 243, 0)', 'rgba(252, 231, 243, 0.6)', 'rgba(252, 231, 243, 1)']
+        swipeActions.right.motionRange,
+        swipeActions.right.backgroundColors
     );
-    const archiveIconOpacity = useTransform(x, [0, 80, 120], [0, 0, 1]);
-    const archiveIconScale = useTransform(x, [0, 80, 150], [0.5, 0.5, 1.2]);
+    const rightSwipeIconOpacity = useTransform(x, swipeActions.right.iconOpacityRange, [0, 0, 1]);
+    const rightSwipeIconScale = useTransform(x, swipeActions.right.iconScaleRange, [0.5, 0.5, 1.2]);
+    const LeftSwipeIcon = swipeActions.left.icon;
+    const RightSwipeIcon = swipeActions.right.icon;
 
-    const y = useMotionValue(0);
+    const handleSwipeAction = useCallback((action) => {
+        if (!action) return false;
+
+        if (action.id === SWIPE_ACTION_IDS.openNote) {
+            if (isArchiveView) return false;
+            setIsEditingNote(true);
+            return false;
+        }
+
+        if (action.id === SWIPE_ACTION_IDS.delete) {
+            return onDelete?.(idea.id) !== false;
+        }
+
+        if (action.id === SWIPE_ACTION_IDS.restore) {
+            return onRestore?.(idea.id) !== false;
+        }
+
+        return false;
+    }, [idea.id, isArchiveView, onDelete, onRestore]);
+
     const exitAnimation = useMemo(() => {
         if (exitDirection === 'right') {
             return { opacity: 0, x: 500, rotate: 12, scale: 0.9, transition: { duration: 0.2, ease: "easeOut" } };
@@ -221,22 +256,20 @@ const InspirationItem = forwardRef(({
             onDragEnd={(e, info) => {
                 if (isSelectionMode) return;
                 setIsDragging(false);
-                // Right swipe: Archive (or Restore in archive view)
-                if (info.offset.x > 150 || (info.velocity.x > 400 && info.offset.x > 50)) {
-                    if (isArchiveView) {
-                        // In Archive View, Right Swipe triggers Editing
-                        setIsEditingContent(true);
-                    } else {
-                        // In Normal View, Right Swipe triggers Archive
-                        setExitDirection('right');
-                        onArchive?.(idea.id);
+
+                if (shouldTriggerSwipeAction(swipeActions.right, info)) {
+                    const shouldExit = handleSwipeAction(swipeActions.right);
+                    if (shouldExit && swipeActions.right.exitDirection) {
+                        setExitDirection(swipeActions.right.exitDirection);
                     }
                     return;
                 }
-                // Left swipe: Delete
-                if (info.offset.x < -200 || (info.velocity.x < -400 && info.offset.x < -50)) {
-                    setExitDirection('left');
-                    onRemove(idea.id);
+
+                if (shouldTriggerSwipeAction(swipeActions.left, info)) {
+                    const shouldExit = handleSwipeAction(swipeActions.left);
+                    if (shouldExit && swipeActions.left.exitDirection) {
+                        setExitDirection(swipeActions.left.exitDirection);
+                    }
                 }
             }}
             onPointerDown={(e) => {
@@ -284,7 +317,7 @@ const InspirationItem = forwardRef(({
                         return;
                     }
                     if (!window.getSelection().toString()) {
-                        onCopy(idea.content, idea.id);
+                        onCopy(idea);
                     }
                 }}
                 onDoubleClick={(e) => {
@@ -309,27 +342,23 @@ const InspirationItem = forwardRef(({
                     </button>
                 )}
 
-                {/* Swipe Background (Delete Action - Left) */}
+                {/* Left Swipe Background */}
                 <motion.div
-                    style={{ backgroundColor: deleteBackgroundColor }}
-                    className={`absolute inset-0 rounded-xl flex items-center justify-end pr-6 -z-10`}
+                    style={{ backgroundColor: leftSwipeBackgroundColor }}
+                    className={swipeActions.left.containerClassName}
                 >
-                    <motion.div style={{ opacity: deleteIconOpacity, scale: deleteIconScale }}>
-                        <Trash2 className="text-white" size={20} />
+                    <motion.div style={{ opacity: leftSwipeIconOpacity, scale: leftSwipeIconScale }}>
+                        <LeftSwipeIcon className={swipeActions.left.iconClassName} size={20} />
                     </motion.div>
                 </motion.div>
 
-                {/* Right Swipe (Archive/Restore/Edit) Background */}
+                {/* Right Swipe Background */}
                 <motion.div
-                    style={{ backgroundColor: archiveBackgroundColor }}
-                    className="absolute inset-0 rounded-xl flex items-center justify-start pl-6 -z-10"
+                    style={{ backgroundColor: rightSwipeBackgroundColor }}
+                    className={swipeActions.right.containerClassName}
                 >
-                    <motion.div style={{ opacity: archiveIconOpacity, scale: archiveIconScale }}>
-                        {isArchiveView ? (
-                            <Pencil className="text-blue-500" size={20} />
-                        ) : (
-                            <Check className="text-pink-600" size={20} />
-                        )}
+                    <motion.div style={{ opacity: rightSwipeIconOpacity, scale: rightSwipeIconScale }}>
+                        <RightSwipeIcon className={swipeActions.right.iconClassName} size={20} />
                     </motion.div>
                 </motion.div>
 
@@ -453,7 +482,7 @@ const InspirationItem = forwardRef(({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onArchive?.(idea.id);
+                                        onRestore?.(idea.id);
                                     }}
                                     className="p-1.5 -mr-2 text-gray-300 hover:text-pink-500 hover:bg-pink-50 dark:text-gray-600 dark:hover:text-pink-400 dark:hover:bg-pink-900/20 rounded-lg transition-all opacity-0 group-hover/card:opacity-100"
                                     title={t('common.restore', 'Restore')}

@@ -6,6 +6,8 @@ import { useTranslation } from '../i18n';
 import { useSync } from '../sync/SyncContext';
 import { useSyncedCategories, useSyncedProjects } from '../sync/useSyncStore';
 import InspirationItem from './components/inspiration/InspirationItem';
+import { copyImageToClipboard } from './components/inspiration/InspirationUtils';
+import { buildIdeaCopyPayload } from './components/inspiration/ideaClipboardUtils';
 import { INSPIRATION_CATEGORIES } from '../../utils/constants';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
@@ -60,10 +62,25 @@ const InspirationArchiveModule = () => {
         immediateSync?.();
     };
 
-    const handleCopy = async (content, id) => {
+    const handleCopy = async (idea) => {
         try {
-            await navigator.clipboard.writeText(content);
-            setCopiedId(id);
+            const { imageUrls, text, textWithoutImages } = buildIdeaCopyPayload(idea);
+            const targetId = idea?.id;
+
+            if (!text) return;
+
+            if (imageUrls.length > 0) {
+                const result = await copyImageToClipboard(imageUrls[0], textWithoutImages);
+                if (result) {
+                    setCopiedId(targetId);
+                    setTimeout(() => setCopiedId(null), 2000);
+                    return;
+                }
+            }
+
+            const fallbackText = imageUrls.length > 0 ? (textWithoutImages || text) : text;
+            await navigator.clipboard.writeText(fallbackText);
+            setCopiedId(targetId);
             setTimeout(() => setCopiedId(null), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);

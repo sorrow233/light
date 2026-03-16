@@ -69,7 +69,7 @@ export const R2_IMAGE_REGEX = /(https:\/\/pub-[a-z0-9]+\.r2\.dev\/[^\s]+)/gi;
 const URL_REGEX = /(https?:\/\/[^\s]+)/gi;
 
 // Helper for parsing rich text (with image support)
-export const parseRichText = (text) => {
+export const parseRichText = (text, clipboardText = '') => {
     if (!text) return null;
 
     // 合并两种正则的匹配结果并去重
@@ -194,7 +194,11 @@ export const parseRichText = (text) => {
     // 如果有图片，添加图片元素
     if (imageMatches.length > 0) {
         const imageElements = imageMatches.map((url, idx) => (
-            <InspirationImage key={`img-${idx}`} src={url} textContent={textWithoutImages} />
+            <InspirationImage
+                key={`img-${idx}`}
+                src={url}
+                textContent={clipboardText || textWithoutImages}
+            />
         ));
 
         return (
