@@ -25,6 +25,13 @@ const formatActivationTime = (timestamp) => {
     return new Date(timestamp).toLocaleString('zh-CN');
 };
 
+const summarizeUserId = (value, fallback = '未登录') => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return fallback;
+    if (normalized.length <= 20) return normalized;
+    return `${normalized.slice(0, 8)}...${normalized.slice(-6)}`;
+};
+
 const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
     const { user } = useAuth();
     const { data: preferences, set } = useSyncedMap(doc, 'user_preferences');
@@ -130,117 +137,107 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
     }, [onSuccess, updatePreferenceState]);
 
     const isBoundToCurrentUser = !!user?.uid && accessState.ownerId === user.uid;
-    const statusTone = accessState.enabled && isBoundToCurrentUser
-        ? 'emerald'
-        : accessState.token
-            ? 'amber'
-            : 'gray';
-
-    const toneClasses = {
-        emerald: {
-            border: 'border-emerald-100 dark:border-emerald-900/30',
-            iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
-            iconText: 'text-emerald-600 dark:text-emerald-400',
-            badge: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300'
-        },
-        amber: {
-            border: 'border-amber-100 dark:border-amber-900/30',
-            iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-            iconText: 'text-amber-600 dark:text-amber-400',
-            badge: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300'
-        },
-        gray: {
-            border: 'border-gray-100 dark:border-gray-800',
-            iconBg: 'bg-gray-100 dark:bg-gray-800',
-            iconText: 'text-gray-500 dark:text-gray-400',
-            badge: 'bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-300'
-        }
-    };
-
-    const currentTone = toneClasses[statusTone];
+    const isEnabledForCurrentUser = accessState.enabled && isBoundToCurrentUser;
+    const isVerifiedForCurrentUser = !!accessState.token && isBoundToCurrentUser;
+    const isBoundToAnotherUser = !!accessState.token && !!accessState.ownerId && !!user?.uid && accessState.ownerId !== user.uid;
+    const hasStoredAuthorization = !!(accessState.token || accessState.ownerId);
+    const statusLabel = isEnabledForCurrentUser
+        ? '已开启'
+        : isVerifiedForCurrentUser
+            ? '待开启'
+            : isBoundToAnotherUser
+                ? '已绑定其他账号'
+                : '未激活';
+    const statusDescription = isEnabledForCurrentUser
+        ? '当前账号已开启同步上传权限，可以直接上传图片。'
+        : isVerifiedForCurrentUser
+            ? '兑换码已绑定当前账号，打开右侧开关即可启用。'
+            : isBoundToAnotherUser
+                ? '当前设备已有其他账号的授权，输入兑换码可重新绑定当前账号。'
+                : '开启时会弹出兑换码输入框，验证后绑定当前账号。';
+    const cardBorderClass = isEnabledForCurrentUser
+        ? 'border-blue-200 dark:border-blue-900/40'
+        : 'border-gray-100 dark:border-gray-800';
+    const iconWrapperClass = isEnabledForCurrentUser
+        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        : 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-300';
+    const statusBadgeClass = isEnabledForCurrentUser
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+        : isBoundToAnotherUser
+            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
+            : 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-200';
 
     return (
         <>
-            <Spotlight className="rounded-2xl" spotColor="rgba(251, 191, 36, 0.12)">
-                <div className={`p-5 rounded-2xl bg-gray-50/50 dark:bg-gray-800/30 border ${currentTone.border}`}>
-                    <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${currentTone.iconBg}`}>
-                            {accessState.enabled && isBoundToCurrentUser ? (
-                                <ShieldCheck size={22} className={currentTone.iconText} />
+            <Spotlight className="rounded-2xl" spotColor="rgba(59, 130, 246, 0.12)">
+                <div className={`w-full p-5 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border ${cardBorderClass}`}>
+                    <div className="flex items-start gap-5">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconWrapperClass}`}>
+                            {isEnabledForCurrentUser ? (
+                                <ShieldCheck size={22} />
                             ) : (
-                                <ShieldOff size={22} className={currentTone.iconText} />
+                                <ShieldOff size={22} />
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
                                     <div className="font-medium text-gray-900 dark:text-white">同步上传权限</div>
                                     <div className="text-xs text-gray-400 mt-0.5">
-                                        开启时会弹出兑换码输入框，验证后绑定当前账号
+                                        {statusDescription}
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleToggle}
-                                    className={`relative w-14 h-8 rounded-full transition-colors ${accessState.enabled && isBoundToCurrentUser ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'}`}
-                                    title={accessState.enabled ? '关闭同步上传权限' : '开启同步上传权限'}
+                                    className={`relative h-8 w-14 rounded-full transition-colors shrink-0 ${isEnabledForCurrentUser ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                    title={isEnabledForCurrentUser ? '关闭同步上传权限' : '开启同步上传权限'}
                                 >
                                     <span
-                                        className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform ${accessState.enabled && isBoundToCurrentUser ? 'translate-x-7' : 'translate-x-1'}`}
+                                        className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${isEnabledForCurrentUser ? 'translate-x-7' : 'translate-x-1'}`}
                                     />
                                 </button>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                <div className="rounded-2xl bg-white/80 dark:bg-gray-900/60 p-3 border border-gray-100 dark:border-gray-800">
-                                    <div className="text-[10px] tracking-widest uppercase text-gray-400 font-bold">状态</div>
-                                    <div className={`mt-2 inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${currentTone.badge}`}>
-                                        {accessState.enabled && isBoundToCurrentUser
-                                            ? '已开启'
-                                            : accessState.token
-                                                ? '已验证待开启'
-                                                : '未激活'}
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl bg-white/80 dark:bg-gray-900/60 p-3 border border-gray-100 dark:border-gray-800">
-                                    <div className="text-[10px] tracking-widest uppercase text-gray-400 font-bold">激活时间</div>
-                                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 break-all">
-                                        {formatActivationTime(accessState.activatedAt)}
-                                    </div>
-                                </div>
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                                <span className={`inline-flex rounded-full px-3 py-1 font-medium ${statusBadgeClass}`}>
+                                    {statusLabel}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    激活时间：{formatActivationTime(accessState.activatedAt)}
+                                </span>
                             </div>
 
-                            <div className="mt-4 rounded-2xl bg-white/80 dark:bg-gray-900/60 p-3 border border-gray-100 dark:border-gray-800">
-                                <div className="text-[10px] tracking-widest uppercase text-gray-400 font-bold">绑定账号</div>
-                                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 break-all">
-                                    {accessState.ownerId || '尚未绑定'}
+                            <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="font-medium text-gray-700 dark:text-gray-200">当前登录</span>
+                                    <span className="break-all">{summarizeUserId(user?.uid)}</span>
                                 </div>
-                                <div className="mt-1 text-[11px] text-gray-400">
-                                    当前登录：{user?.uid || '未登录'}
-                                </div>
+                                {accessState.ownerId && (
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <span className="font-medium text-gray-700 dark:text-gray-200">授权绑定</span>
+                                        <span className="break-all">{summarizeUserId(accessState.ownerId, '尚未绑定')}</span>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="mt-4 flex gap-2">
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
                                 {!isBoundToCurrentUser && (
                                     <button
                                         onClick={openPrompt}
-                                        className="px-4 py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-medium transition-all hover:scale-[1.02] active:scale-95"
+                                        className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-all hover:scale-[1.02] hover:bg-blue-500 active:scale-95"
                                     >
-                                        输入兑换码激活
+                                        输入兑换码
                                     </button>
                                 )}
-                                {isBoundToCurrentUser && !accessState.enabled && (
-                                    <div className="px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 text-sm text-emerald-600 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/30">
+                                {isVerifiedForCurrentUser && !accessState.enabled && (
+                                    <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300">
                                         当前账号已验证，可直接打开开关。
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="mt-3 flex items-center justify-between text-[11px] text-gray-400">
-                                <span>开启权限时会弹窗输入兑换码，兑换码只绑定当前 UID。</span>
-                                {(accessState.token || accessState.ownerId) && (
+                                {hasStoredAuthorization && (
                                     <button
                                         onClick={handleReset}
-                                        className="text-gray-500 hover:text-red-500 transition-colors"
+                                        className="text-sm text-gray-500 transition-colors hover:text-red-500"
                                     >
                                         清除授权
                                     </button>
