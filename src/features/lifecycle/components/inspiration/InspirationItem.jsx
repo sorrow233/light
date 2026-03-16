@@ -5,6 +5,7 @@ import { useTranslation } from '../../../i18n';
 import RichTextInput from './RichTextInput';
 import { parseRichText, getCategoryConfig } from './InspirationUtils';
 import { buildIdeaCopyPayload } from './ideaClipboardUtils';
+import { hexToRgba, resolveCategoryAccentHex } from './categoryThemeUtils';
 import {
     getInspirationSwipeActions,
     shouldTriggerSwipeAction,
@@ -49,6 +50,10 @@ const InspirationItem = forwardRef(({
     const categoryConfig = useMemo(
         () => getCategoryConfig(idea.category, categories),
         [idea.category, categories]
+    );
+    const categoryAccentHex = useMemo(
+        () => resolveCategoryAccentHex(categoryConfig),
+        [categoryConfig]
     );
     const isCompleted = idea.completed || false;
     const shouldHighlightExternalSource = Boolean(idea.source && !['user', 'ai-import'].includes(idea.source));
@@ -208,6 +213,14 @@ const InspirationItem = forwardRef(({
     const rightSwipeIconScale = useTransform(x, swipeActions.right.iconScaleRange, [0.5, 0.5, 1.2]);
     const LeftSwipeIcon = swipeActions.left.icon;
     const RightSwipeIcon = swipeActions.right.icon;
+    const noteEditorStyle = useMemo(() => ({
+        borderColor: hexToRgba(categoryAccentHex, 0.45),
+        backgroundColor: hexToRgba(categoryAccentHex, 0.1),
+        boxShadow: `0 12px 28px -22px ${hexToRgba(categoryAccentHex, 0.85)}`,
+        '--note-placeholder-color': hexToRgba(categoryAccentHex, 0.55),
+        '--note-text-color': categoryAccentHex,
+        '--note-hint-color': hexToRgba(categoryAccentHex, 0.78),
+    }), [categoryAccentHex]);
 
     const handleSwipeAction = useCallback((action) => {
         if (!action) return false;
@@ -497,7 +510,10 @@ const InspirationItem = forwardRef(({
                         onClick={(e) => e.stopPropagation()}
                     >
                         {isEditingNote && !isArchiveView ? (
-                            <div className="rounded-xl border border-pink-200/80 bg-pink-50/85 p-3 shadow-sm dark:border-pink-800/80 dark:bg-pink-900/20">
+                            <div
+                                className="rounded-xl border p-3 shadow-sm"
+                                style={noteEditorStyle}
+                            >
                                 <input
                                     ref={noteInputRef}
                                     type="text"
@@ -506,9 +522,12 @@ const InspirationItem = forwardRef(({
                                     onKeyDown={handleNoteKeyDown}
                                     onBlur={handleNoteSave}
                                     placeholder={t('inspiration.notePlaceholder', '添加随记...')}
-                                    className="w-full bg-transparent text-[13px] font-medium leading-relaxed text-gray-700 outline-none placeholder:text-pink-300 dark:text-pink-100 dark:placeholder:text-pink-300/70"
+                                    className="w-full bg-transparent text-[13px] font-medium leading-relaxed text-[var(--note-text-color)] outline-none placeholder:text-[var(--note-placeholder-color)]"
+                                    style={{ caretColor: categoryAccentHex }}
                                 />
-                                <div className="mt-2 flex items-center gap-2 text-[9px] text-pink-400/80 dark:text-pink-200/70">
+                                <div
+                                    className="mt-2 flex items-center gap-2 text-[9px] text-[var(--note-hint-color)]"
+                                >
                                     <span>Enter {t('common.save', '保存')}</span>
                                     <span>·</span>
                                     <span>Esc {t('common.cancel', '取消')}</span>
