@@ -1,3 +1,4 @@
+import { authorizeImageAccess } from './_imageAccess.js';
 import { extractObjectKeyFromPublicUrl, parseR2Config, signedR2Fetch } from './_r2.js';
 
 /**
@@ -9,7 +10,7 @@ import { extractObjectKeyFromPublicUrl, parseR2Config, signedR2Fetch } from './_
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Upload-Access-Token'
 };
 
 export async function onRequestPost(context) {
@@ -28,12 +29,9 @@ export async function onRequestPost(context) {
         }
 
         // 2. 验证用户白名单
-        const whitelist = (env.UPLOAD_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean);
-        const authHeader = request.headers.get('Authorization') || '';
-        const userId = authHeader.replace('Bearer ', '').trim();
-
-        if (!userId || !whitelist.includes(userId)) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        const accessResult = await authorizeImageAccess(request, env);
+        if (!accessResult.authorized) {
+            return new Response(JSON.stringify({ error: accessResult.reason || 'Unauthorized' }), {
                 status: 403,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });

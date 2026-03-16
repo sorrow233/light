@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useImperativeHandle, forwardRef, 
 import { Image, X, Loader2, AlertCircle, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../auth/AuthContext';
+import { buildUploadAccessHeaders } from '../../../settings/uploadAccessService';
 
 /**
  * 图片上传组件
@@ -134,9 +135,7 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
             // 发送上传请求
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${user.uid}`
-                },
+                headers: buildUploadAccessHeaders(user.uid),
                 body: formData
             });
 
@@ -147,6 +146,10 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
                 let errorMsg = result.error || '上传失败';
                 if (errorMsg.includes('whitelist')) {
                     errorMsg = '没有上传权限';
+                } else if (errorMsg.includes('Upload access token') || errorMsg.includes('membership')) {
+                    errorMsg = '请先在设置中激活图片上传权限';
+                } else if (errorMsg.includes('Unauthorized')) {
+                    errorMsg = '当前账号还没有图片上传权限，请去设置里激活';
                 } else if (errorMsg.includes('R2')) {
                     errorMsg = '存储服务异常，请稍后重试';
                 } else if (errorMsg.includes('configuration')) {

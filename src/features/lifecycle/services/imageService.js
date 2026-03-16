@@ -1,3 +1,5 @@
+import { buildUploadAccessHeaders } from '../../settings/uploadAccessService';
+
 /**
  * R2 图片删除服务
  * 用于在删除灵感卡片时清理关联的图片
@@ -39,13 +41,16 @@ export async function deleteImage(url, userId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userId}`
+                ...buildUploadAccessHeaders(userId)
             },
             body: JSON.stringify({ url })
         });
 
         if (!response.ok) {
-            const result = await response.json();
+            const contentType = response.headers.get('content-type') || '';
+            const result = contentType.includes('application/json')
+                ? await response.json()
+                : { error: await response.text() };
             console.warn('Failed to delete image:', result.error);
             return false;
         }

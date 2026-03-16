@@ -5,6 +5,7 @@ import { X, Download, Upload, FileJson, AlertCircle, CheckCircle2, Loader2, Hist
 import { useSync } from '../sync/SyncContext';
 import { exportAllData, importData, validateImportData, downloadAsJson, readJsonFile } from './dataUtils';
 import { getLocalBackups } from '../sync/LocalBackupService';
+import UploadAccessPanel from './components/UploadAccessPanel';
 import Spotlight from '../../components/shared/Spotlight';
 
 const DataManagementModal = ({ isOpen, onClose }) => {
@@ -43,6 +44,17 @@ const DataManagementModal = ({ isOpen, onClose }) => {
         resetState();
         onClose();
     };
+
+    const handlePanelError = useCallback((message) => {
+        setSuccess('');
+        setError(message);
+    }, []);
+
+    const handlePanelSuccess = useCallback((message) => {
+        setError('');
+        setSuccess(message);
+        setTimeout(() => setSuccess(''), 3000);
+    }, []);
 
     // 导出处理
     const handleExport = () => {
@@ -252,6 +264,12 @@ const DataManagementModal = ({ isOpen, onClose }) => {
                     {/* Main Menu */}
                     {mode === 'menu' && (
                         <div className="space-y-4">
+                            <UploadAccessPanel
+                                doc={doc}
+                                onError={handlePanelError}
+                                onSuccess={handlePanelSuccess}
+                            />
+
                             {/* Local Backups Button */}
                             <Spotlight className="rounded-2xl" spotColor="rgba(147, 51, 234, 0.1)">
                                 <button
