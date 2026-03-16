@@ -50,6 +50,16 @@ body {
     /* Remove tap highlight on mobile */
 }
 
+.rich-inline-bold {
+    font-weight: 700 !important;
+    color: #111827;
+    font-synthesis: weight;
+}
+
+.dark .rich-inline-bold {
+    color: #f8fafc;
+}
+
 .accent-text {
     color: var(--accent-500);
 }

@@ -171,9 +171,9 @@ export const parseRichText = (text) => {
         }
         if (part.startsWith('**') && part.endsWith('**')) {
             return (
-                <span key={index} className="font-bold text-gray-900 dark:text-gray-100 mx-0.5">
+                <strong key={index} className="rich-inline-bold mx-0.5">
                     {part.slice(2, -2)}
-                </span>
+                </strong>
             );
         }
         if (part.startsWith('[') && part.endsWith(']')) {

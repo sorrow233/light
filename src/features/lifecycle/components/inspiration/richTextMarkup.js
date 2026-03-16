@@ -165,6 +165,6 @@ export const markupToHtml = (text) => {
             const style = `background: radial-gradient(ellipse 100% 40% at center 80%, ${highlightColor} 0%, ${highlightColor} 70%, transparent 100%); padding: 0 0.15em;`;
             return `<span class="colored-text relative inline" data-color-id="${colorId}" style="${style}">${content}</span>`;
         })
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong class="rich-inline-bold">$1</strong>')
         .replace(/\n/g, '<br>');
 };
