@@ -95,9 +95,13 @@ const RichTextInput = forwardRef(({
             coloredSpan.dataset.colorId = colorId;
             coloredSpan.className = 'colored-text relative inline';
 
-            // 包裹选中内容
+            // 使用 extractContents 比 surroundContents 更稳，跨节点选区也能包裹
             try {
-                range.surroundContents(coloredSpan);
+                const fragment = range.extractContents();
+                if (!fragment.textContent?.trim()) return false;
+
+                coloredSpan.appendChild(fragment);
+                range.insertNode(coloredSpan);
                 sel.removeAllRanges();
 
                 // 将光标移到颜色文字后面
@@ -111,7 +115,6 @@ const RichTextInput = forwardRef(({
                 handleInput();
                 return true;
             } catch (e) {
-                // surroundContents 在跨节点选择时可能失败
                 console.warn('Color apply failed:', e);
                 return false;
             }
