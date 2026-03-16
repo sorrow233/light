@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "lighta",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-03-10",
+  "vars": {
+    "R2_PUBLIC_URL": "https://pub-c2099bb9ccfc4a6b8747475f841993a2.r2.dev"
+  },
+  "r2_buckets": [
+    {
+      "binding": "LIGHT_UPLOAD_BUCKET",
+      "bucket_name": "flowstudio"
+    }
+  ]
+}

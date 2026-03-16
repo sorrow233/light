@@ -1,5 +1,5 @@
 import { authorizeImageAccess } from './_imageAccess.js';
-import { buildR2PublicUrl, parseR2Config, signedR2Fetch } from './_r2.js';
+import { buildStoragePublicUrl, resolveR2Storage, uploadToR2Storage } from './_r2Storage.js';
 
 /**
  * R2 图片上传 API
@@ -38,9 +38,9 @@ export async function onRequestPost(context) {
 
     try {
         // 1. 解析 R2 配置
-        let r2Config;
+        let r2Storage;
         try {
-            r2Config = parseR2Config(env);
+            r2Storage = resolveR2Storage(env);
         } catch (configError) {
             return new Response(JSON.stringify({ error: configError.message || 'Missing R2 configuration' }), {
                 status: 500,
@@ -89,13 +89,10 @@ export async function onRequestPost(context) {
         // 6. 生成文件名并上传到 R2
         const fileName = generateFileName(file.name);
         const fileBuffer = await file.arrayBuffer();
-        const uploadResponse = await signedR2Fetch({
-            method: 'PUT',
-            config: r2Config,
+        const uploadResponse = await uploadToR2Storage(r2Storage, {
             objectKey: fileName,
             body: fileBuffer,
             contentType: file.type,
-            retries: 2
         });
 
         if (!uploadResponse.ok) {
@@ -112,7 +109,7 @@ export async function onRequestPost(context) {
         }
 
         // 7. 返回公开 URL
-        const imageUrl = buildR2PublicUrl(r2Config, fileName);
+        const imageUrl = buildStoragePublicUrl(r2Storage, fileName);
 
         return new Response(JSON.stringify({
             success: true,

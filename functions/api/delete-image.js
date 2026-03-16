@@ -1,5 +1,5 @@
 import { authorizeImageAccess } from './_imageAccess.js';
-import { extractObjectKeyFromPublicUrl, parseR2Config, signedR2Fetch } from './_r2.js';
+import { deleteFromR2Storage, extractObjectKeyFromStorageUrl, resolveR2Storage } from './_r2Storage.js';
 
 /**
  * R2 图片删除 API
@@ -18,9 +18,9 @@ export async function onRequestPost(context) {
 
     try {
         // 1. 解析 R2 配置
-        let r2Config;
+        let r2Storage;
         try {
-            r2Config = parseR2Config(env);
+            r2Storage = resolveR2Storage(env);
         } catch (configError) {
             return new Response(JSON.stringify({ error: configError.message || 'Missing R2 configuration' }), {
                 status: 500,
@@ -49,7 +49,7 @@ export async function onRequestPost(context) {
         }
 
         // 4. 从 URL 提取文件路径
-        const urlPath = extractObjectKeyFromPublicUrl(url, r2Config.publicUrl);
+        const urlPath = extractObjectKeyFromStorageUrl(url, r2Storage);
 
         if (!urlPath || !urlPath.startsWith('inspiration/')) {
             return new Response(JSON.stringify({ error: 'Invalid image URL' }), {
@@ -59,11 +59,8 @@ export async function onRequestPost(context) {
         }
 
         // 5. 调用 R2 删除 API
-        const deleteResponse = await signedR2Fetch({
-            method: 'DELETE',
-            config: r2Config,
+        const deleteResponse = await deleteFromR2Storage(r2Storage, {
             objectKey: urlPath,
-            retries: 2
         });
 
         // R2 删除成功返回 204，文件不存在也返回 204
