@@ -4,4 +4,4 @@ dist/
 .wrangler/
 *.log
 .codex-secrets/
-local-upload-member-keys.txt
+local-upload-member-keys*.txt

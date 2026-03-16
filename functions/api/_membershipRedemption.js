@@ -36,18 +36,28 @@ export async function redeemMembershipKey({ env, keyRecord, userId }) {
     const currentMembership = await getFirestoreDocument(env, membershipDocPath);
     const currentData = currentMembership?.data || {};
     const currentExpiresAt = toPositiveNumber(currentData.expiresAt);
+    const currentPlanId = String(currentData.planId || '').trim();
+    const currentIsLifetime = currentPlanId === 'upload_lifetime';
     const currentRedemptionCount = Math.max(0, Number.parseInt(currentData.redemptionCount, 10) || 0);
     const activatedAt = now;
-    const baseTimestamp = currentExpiresAt > now ? currentExpiresAt : now;
-    const expiresAt = baseTimestamp + (keyRecord.durationDays * DAY_MS);
+    const isLifetimeKey = keyRecord.planId === 'upload_lifetime';
+    const hasActiveLimitedMembership = currentExpiresAt > now;
+    const effectiveIsLifetime = currentIsLifetime || isLifetimeKey;
+    const baseTimestamp = hasActiveLimitedMembership ? currentExpiresAt : now;
+    const expiresAt = effectiveIsLifetime
+        ? 0
+        : baseTimestamp + (keyRecord.durationDays * DAY_MS);
     const firstActivatedAt = toPositiveNumber(currentData.firstActivatedAt) || activatedAt;
+    const effectivePlanId = effectiveIsLifetime ? 'upload_lifetime' : keyRecord.planId;
+    const effectivePlanLabel = effectiveIsLifetime ? '永久上传会员' : keyRecord.planLabel;
+    const effectiveDurationDays = effectiveIsLifetime ? 0 : keyRecord.durationDays;
     const membershipFields = {
         userId,
         scope: MEMBERSHIP_SCOPE,
         status: 'active',
-        planId: keyRecord.planId,
-        planLabel: keyRecord.planLabel,
-        durationDays: keyRecord.durationDays,
+        planId: effectivePlanId,
+        planLabel: effectivePlanLabel,
+        durationDays: effectiveDurationDays,
         firstActivatedAt,
         activatedAt,
         expiresAt,
@@ -91,10 +101,10 @@ export async function redeemMembershipKey({ env, keyRecord, userId }) {
     return {
         activatedAt,
         expiresAt,
-        planId: keyRecord.planId,
-        planLabel: keyRecord.planLabel,
-        durationDays: keyRecord.durationDays,
-        isExtended: currentExpiresAt > now,
+        planId: effectivePlanId,
+        planLabel: effectivePlanLabel,
+        durationDays: effectiveDurationDays,
+        isExtended: currentIsLifetime || currentExpiresAt > now,
         previousExpiresAt: currentExpiresAt,
     };
 }

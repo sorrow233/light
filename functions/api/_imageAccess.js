@@ -117,8 +117,13 @@ export async function issueImageAccessToken(userId, env, options = {}) {
     const activatedAt = Number(options.activatedAt) || 0;
     const planId = normalizeValue(options.planId).toLowerCase();
     const durationDays = Number(options.durationDays) || 0;
+    const isLifetimePlan = planId === 'upload_lifetime';
 
-    if (!expiresAt || !activatedAt || !planId || !durationDays) {
+    if (
+        !activatedAt
+        || !planId
+        || (!isLifetimePlan && (!expiresAt || !durationDays))
+    ) {
         const error = new Error('Missing membership token payload');
         error.status = 500;
         throw error;
@@ -161,14 +166,18 @@ export async function verifyImageAccessToken(token, env) {
         }
 
         if (version === TOKEN_VERSION) {
+            const planId = normalizeValue(payload?.planId).toLowerCase();
+            const isLifetimePlan = planId === 'upload_lifetime';
             if (
-                !Number.isFinite(Number(payload?.exp))
-                || Number(payload.exp) <= 0
-                || !Number.isFinite(Number(payload?.activatedAt))
+                !Number.isFinite(Number(payload?.activatedAt))
                 || Number(payload.activatedAt) <= 0
-                || !normalizeValue(payload?.planId)
+                || !planId
                 || !Number.isFinite(Number(payload?.durationDays))
-                || Number(payload.durationDays) <= 0
+                || (!isLifetimePlan && Number(payload.durationDays) <= 0)
+                || (isLifetimePlan && Number(payload.durationDays) !== 0)
+                || !Number.isFinite(Number(payload?.exp))
+                || (!isLifetimePlan && Number(payload.exp) <= 0)
+                || (isLifetimePlan && Number(payload.exp) !== 0)
             ) {
                 return null;
             }
@@ -224,7 +233,11 @@ export async function authorizeImageAccess(request, env) {
         };
     }
 
-    if (Number(payload.version) === TOKEN_VERSION && Number(payload.exp) <= Date.now()) {
+    if (
+        Number(payload.version) === TOKEN_VERSION
+        && Number(payload.exp) > 0
+        && Number(payload.exp) <= Date.now()
+    ) {
         return {
             authorized: false,
             reason: 'Unauthorized: Upload membership expired',

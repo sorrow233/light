@@ -1,6 +1,7 @@
 import { MEMBERSHIP_KEY_HASH_SET } from './_membershipKeyHashes.js';
 
 const DURATION_KEY_PATTERN = /^LIGHT-UPLOAD-D(\d{3,4})-[A-F0-9]{6}-[A-F0-9]{6}-[A-F0-9]{6}$/;
+const LIFETIME_KEY_PATTERN = /^LIGHT-UPLOAD-LIFE-[A-F0-9]{6}-[A-F0-9]{6}-[A-F0-9]{6}$/;
 const textEncoder = new TextEncoder();
 
 function normalizeValue(value) {
@@ -24,6 +25,15 @@ function buildPlanRecord(durationDays, codeFormat) {
     };
 }
 
+function buildLifetimePlanRecord() {
+    return {
+        durationDays: 0,
+        planId: 'upload_lifetime',
+        planLabel: '永久上传会员',
+        codeFormat: 'lifetime_prefixed',
+    };
+}
+
 export function getMembershipPlanFromKey(rawKey) {
     const normalizedKey = normalizeValue(rawKey);
     const durationMatch = normalizedKey.match(DURATION_KEY_PATTERN);
@@ -35,6 +45,10 @@ export function getMembershipPlanFromKey(rawKey) {
         }
 
         return null;
+    }
+
+    if (LIFETIME_KEY_PATTERN.test(normalizedKey)) {
+        return buildLifetimePlanRecord();
     }
 
     return null;
