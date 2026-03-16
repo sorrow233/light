@@ -28,6 +28,12 @@ import {
     parseCategoryTransferOutput,
 } from './components/inspiration/categoryTransferUtils';
 import { buildCategoryClipboardText } from './components/inspiration/categoryClipboardUtils';
+import {
+    buildInspirationCategoryPath,
+    decodeCategoryRoutePart,
+    DEFAULT_INSPIRATION_CATEGORY_ID,
+    resolveCategoryFallback,
+} from './components/inspiration/categoryRouteUtils';
 import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
 import { useTheme } from '../../hooks/ThemeContext';
 
@@ -35,16 +41,6 @@ import { useTheme } from '../../hooks/ThemeContext';
 const getNextAutoColorIndex = (totalCount) => {
     const groupIndex = Math.floor(totalCount / 3);
     return groupIndex % COLOR_CONFIG.length;
-};
-
-const encodeRoutePart = (value) => encodeURIComponent(String(value || '').trim());
-const decodeRoutePart = (value) => {
-    if (!value) return null;
-    try {
-        return decodeURIComponent(value);
-    } catch {
-        return value;
-    }
 };
 
 const TODO_AI_CLASS_UNCLASSIFIED = 'unclassified';
@@ -70,7 +66,7 @@ const InspirationModule = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { categoryId: routeCategoryParam } = useParams();
-    const routeCategoryId = decodeRoutePart(routeCategoryParam);
+    const routeCategoryId = decodeCategoryRoutePart(routeCategoryParam);
     const { user } = useAuth();
     const { isDark } = useTheme();
     // Sync - 使用 immediateSync 实现即时同步
@@ -87,6 +83,7 @@ const InspirationModule = () => {
             cleanupDuplicates: true,
         }
     );
+    const isCategoryCatalogHydrated = syncedCategories.length > 0 || status === 'synced';
 
     // Merge synced categories with defaults to ensure colors exist (fixes missing colors in old data)
     // Also deduplicate by ID to handle potential sync data corruption
@@ -163,7 +160,7 @@ const InspirationModule = () => {
     const [showWeekSelector, setShowWeekSelector] = useState(false);
     const [deletedIdeas, setDeletedIdeas] = useState([]);
     const [archiveShake, setArchiveShake] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState(() => routeCategoryId || 'note'); // 分类状态
+    const [selectedCategory, setSelectedCategory] = useState(() => routeCategoryId || DEFAULT_INSPIRATION_CATEGORY_ID); // 分类状态
     const [isSelectionMode, setIsSelectionMode] = useState(false); // 多选模式
     const [selectedIdeaIds, setSelectedIdeaIds] = useState([]); // 已选中的 ID
     const [todoAiFilter, setTodoAiFilter] = useState('all');
@@ -213,51 +210,48 @@ const InspirationModule = () => {
 
     usePageTitle(selectedCategoryTitle);
 
-    const buildInspirationPath = useCallback((categoryId) => {
-        if (!categoryId) return '/inspiration';
-        return `/inspiration/c/${encodeRoutePart(categoryId)}`;
-    }, []);
-
     // Sync route category to local state (route is source of truth when present).
-    // Important: do NOT depend on selectedCategory here, otherwise manual category click
-    // can be reverted by stale route value before URL sync effect runs.
+    // Wait for the synced category catalog before validating the route, otherwise
+    // custom categories can be misclassified as invalid during the initial refresh.
     useEffect(() => {
-        if (categories.length === 0 || !routeCategoryId) return;
+        if (categories.length === 0 || !routeCategoryId || !isCategoryCatalogHydrated) return;
 
         if (categories.some((cat) => cat.id === routeCategoryId)) {
             setSelectedCategory((prev) => (prev === routeCategoryId ? prev : routeCategoryId));
             return;
         }
 
-        const fallback = categories.find((cat) => cat.id === 'note') || categories[0];
+        const fallback = resolveCategoryFallback(categories);
         if (fallback) {
             setSelectedCategory((prev) => (prev === fallback.id ? prev : fallback.id));
         }
-    }, [categories, routeCategoryId]);
+    }, [categories, isCategoryCatalogHydrated, routeCategoryId]);
 
     // Ensure selected category remains valid even after category removal
     useEffect(() => {
-        if (categories.length === 0) return;
+        if (categories.length === 0 || !isCategoryCatalogHydrated) return;
         if (categories.some((cat) => cat.id === selectedCategory)) return;
 
-        const fallback = categories.find((cat) => cat.id === 'note') || categories[0];
+        const fallback = resolveCategoryFallback(categories);
         if (fallback) {
             setSelectedCategory(fallback.id);
         }
-    }, [categories, selectedCategory]);
+    }, [categories, isCategoryCatalogHydrated, selectedCategory]);
 
     // Sync local selected category back to URL
     useEffect(() => {
         if (!selectedCategory) return;
 
-        const targetPath = buildInspirationPath(selectedCategory);
+        if (!isCategoryCatalogHydrated && routeCategoryId === selectedCategory) return;
+
+        const targetPath = buildInspirationCategoryPath(selectedCategory);
         const currentPathWithSearch = `${location.pathname}${location.search || ''}`;
         const targetPathWithSearch = `${targetPath}${location.search || ''}`;
 
         if (currentPathWithSearch !== targetPathWithSearch) {
             navigate(targetPathWithSearch, { replace: true });
         }
-    }, [buildInspirationPath, location.pathname, location.search, navigate, selectedCategory]);
+    }, [isCategoryCatalogHydrated, location.pathname, location.search, navigate, routeCategoryId, selectedCategory]);
 
     useEffect(() => {
         if (categories.length === 0) return;
