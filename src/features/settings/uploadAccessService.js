@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'light_image_upload_access';
-export const UPLOAD_ACCESS_STATE_VERSION = 2;
+const LEGACY_UPLOAD_ACCESS_STATE_VERSION = 2;
+export const UPLOAD_ACCESS_STATE_VERSION = 3;
 
 function canUseStorage() {
     return typeof window !== 'undefined' && !!window.localStorage;
@@ -15,12 +16,17 @@ export function normalizeUploadAccessState(source = {}) {
         source.imageUploadAccessStateVersion ?? source.stateVersion ?? 0
     );
 
-    if (stateVersion !== UPLOAD_ACCESS_STATE_VERSION) {
+    if (
+        stateVersion !== LEGACY_UPLOAD_ACCESS_STATE_VERSION
+        && stateVersion !== UPLOAD_ACCESS_STATE_VERSION
+    ) {
         return {
             enabled: false,
             token: '',
             ownerId: '',
             activatedAt: 0,
+            expiresAt: 0,
+            planId: '',
             stateVersion: UPLOAD_ACCESS_STATE_VERSION,
         };
     }
@@ -40,8 +46,23 @@ export function normalizeUploadAccessState(source = {}) {
         activatedAt: toPositiveNumber(
             source.imageUploadAccessActivatedAt ?? source.activatedAt
         ),
-        stateVersion: UPLOAD_ACCESS_STATE_VERSION,
+        expiresAt: stateVersion >= UPLOAD_ACCESS_STATE_VERSION
+            ? toPositiveNumber(source.imageUploadAccessExpiresAt ?? source.expiresAt)
+            : 0,
+        planId: stateVersion >= UPLOAD_ACCESS_STATE_VERSION
+            ? typeof source.imageUploadAccessPlanId === 'string'
+                ? source.imageUploadAccessPlanId
+                : typeof source.planId === 'string'
+                    ? source.planId
+                    : ''
+            : 'legacy_unlimited',
+        stateVersion,
     };
+}
+
+export function isUploadAccessExpired(source = {}, now = Date.now()) {
+    const normalized = normalizeUploadAccessState(source);
+    return normalized.expiresAt > 0 && normalized.expiresAt <= now;
 }
 
 export function getStoredUploadAccessState() {
@@ -85,6 +106,7 @@ export function buildUploadAccessHeaders(userId, extraHeaders = {}) {
         && accessState.token
         && accessState.ownerId
         && accessState.ownerId === userId
+        && !isUploadAccessExpired(accessState)
     ) {
         headers['X-Upload-Access-Token'] = accessState.token;
     }
@@ -130,6 +152,9 @@ export async function activateUploadAccess({ user, membershipKey }) {
         if (rawError.includes('Invalid membership key')) {
             throw new Error('兑换码无效，请检查后重试');
         }
+        if (rawError.includes('already redeemed')) {
+            throw new Error('这个兑换码已经被使用过了');
+        }
         if (rawError.includes('Firebase ID token') || rawError.includes('INVALID_ID_TOKEN')) {
             throw new Error('登录态已失效，请重新登录后再试');
         }
@@ -140,5 +165,10 @@ export async function activateUploadAccess({ user, membershipKey }) {
         token: String(result.token || ''),
         userId: String(result.userId || user.uid || ''),
         activatedAt: toPositiveNumber(result.activatedAt) || Date.now(),
+        expiresAt: toPositiveNumber(result.expiresAt),
+        planId: String(result.planId || ''),
+        planLabel: String(result.planLabel || ''),
+        durationDays: toPositiveNumber(result.durationDays),
+        extended: result.extended === true,
     };
 }

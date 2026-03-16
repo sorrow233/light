@@ -35,7 +35,7 @@ const UploadAccessPromptModal = ({
                                 <div>
                                     <div className="text-xl font-light text-gray-900 dark:text-white">请输入兑换码</div>
                                     <div className="mt-1 text-sm text-gray-400">
-                                        验证后将为当前账号开启同步上传权限
+                                        一次性兑换后将为当前账号开通会员上传权限
                                     </div>
                                 </div>
                                 <button
@@ -69,7 +69,7 @@ const UploadAccessPromptModal = ({
                                     </div>
                                 ) : (
                                     <div className="mt-3 text-xs text-gray-400">
-                                        兑换码只绑定当前 UID，不会写入导出备份。
+                                        兑换码为一次性使用，只绑定当前 UID，不会写入导出备份。
                                     </div>
                                 )}
                             </div>

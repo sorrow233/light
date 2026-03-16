@@ -7,6 +7,7 @@ import UploadAccessPromptModal from './UploadAccessPromptModal';
 import {
     activateUploadAccess,
     clearStoredUploadAccessState,
+    isUploadAccessExpired,
     normalizeUploadAccessState,
     persistUploadAccessState,
     UPLOAD_ACCESS_STATE_VERSION,
@@ -17,12 +18,32 @@ const preferenceKeys = {
     token: 'imageUploadAccessToken',
     ownerId: 'imageUploadAccessOwnerId',
     activatedAt: 'imageUploadAccessActivatedAt',
+    expiresAt: 'imageUploadAccessExpiresAt',
+    planId: 'imageUploadAccessPlanId',
     stateVersion: 'imageUploadAccessStateVersion',
 };
 
 const formatActivationTime = (timestamp) => {
     if (!timestamp) return '未激活';
     return new Date(timestamp).toLocaleString('zh-CN');
+};
+
+const formatExpiryTime = (timestamp) => {
+    if (!timestamp) return '无限期';
+    return new Date(timestamp).toLocaleString('zh-CN');
+};
+
+const formatPlanLabel = (planId) => {
+    const normalized = String(planId || '').trim();
+    if (!normalized) return '未设置';
+    if (normalized === 'legacy_unlimited') return '旧版永久授权';
+
+    const match = normalized.match(/upload_(\d+)d/i);
+    if (match) {
+        return `${Number(match[1])} 天会员`;
+    }
+
+    return normalized;
 };
 
 const summarizeUserId = (value, fallback = '未登录') => {
@@ -59,6 +80,8 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
         set(preferenceKeys.token, nextState.token);
         set(preferenceKeys.ownerId, nextState.ownerId);
         set(preferenceKeys.activatedAt, nextState.activatedAt);
+        set(preferenceKeys.expiresAt, nextState.expiresAt ?? 0);
+        set(preferenceKeys.planId, nextState.planId ?? '');
         set(preferenceKeys.stateVersion, nextState.stateVersion ?? UPLOAD_ACCESS_STATE_VERSION);
         persistUploadAccessState(nextState);
     }, [set]);
@@ -77,6 +100,11 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
     const handleToggle = useCallback(() => {
         if (!user?.uid) {
             onError?.('请先登录再管理同步上传权限');
+            return;
+        }
+
+        if (isUploadAccessExpired(accessState)) {
+            openPrompt();
             return;
         }
 
@@ -108,6 +136,8 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                 token: activated.token,
                 ownerId: activated.userId,
                 activatedAt: activated.activatedAt,
+                expiresAt: activated.expiresAt,
+                planId: activated.planId,
                 stateVersion: UPLOAD_ACCESS_STATE_VERSION,
             };
 
@@ -127,6 +157,8 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
             token: '',
             ownerId: '',
             activatedAt: 0,
+            expiresAt: 0,
+            planId: '',
             stateVersion: UPLOAD_ACCESS_STATE_VERSION,
         };
 
@@ -137,31 +169,47 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
     }, [onSuccess, updatePreferenceState]);
 
     const isBoundToCurrentUser = !!user?.uid && accessState.ownerId === user.uid;
-    const isEnabledForCurrentUser = accessState.enabled && isBoundToCurrentUser;
-    const isVerifiedForCurrentUser = !!accessState.token && isBoundToCurrentUser;
+    const isExpiredForCurrentUser = isBoundToCurrentUser && isUploadAccessExpired(accessState);
+    const isLegacyAuthorization = isBoundToCurrentUser && accessState.stateVersion === 2;
+    const isEnabledForCurrentUser = accessState.enabled && isBoundToCurrentUser && !isExpiredForCurrentUser;
+    const isVerifiedForCurrentUser = !!accessState.token && isBoundToCurrentUser && !isExpiredForCurrentUser;
     const isBoundToAnotherUser = !!accessState.token && !!accessState.ownerId && !!user?.uid && accessState.ownerId !== user.uid;
     const hasStoredAuthorization = !!(accessState.token || accessState.ownerId);
-    const statusLabel = isEnabledForCurrentUser
+    const statusLabel = isExpiredForCurrentUser
+        ? '已过期'
+        : isEnabledForCurrentUser
         ? '已开启'
         : isVerifiedForCurrentUser
             ? '待开启'
+            : isLegacyAuthorization
+                ? '旧版授权'
             : isBoundToAnotherUser
                 ? '已绑定其他账号'
                 : '未激活';
-    const statusDescription = isEnabledForCurrentUser
+    const statusDescription = isExpiredForCurrentUser
+        ? '当前会员上传权限已经到期，需要输入新的兑换码续期。'
+        : isEnabledForCurrentUser
         ? '当前账号已开启同步上传权限，可以直接上传图片。'
         : isVerifiedForCurrentUser
             ? '兑换码已绑定当前账号，打开右侧开关即可启用。'
+            : isLegacyAuthorization
+                ? '当前账号仍在使用旧版长期授权，续期后会切换到正式会员时效。'
             : isBoundToAnotherUser
                 ? '当前设备已有其他账号的授权，输入兑换码可重新绑定当前账号。'
-                : '开启时会弹出兑换码输入框，验证后绑定当前账号。';
+                : '开启时会弹出兑换码输入框。新兑换码为一次性使用，并绑定当前账号。';
     const cardBorderClass = isEnabledForCurrentUser
         ? 'border-blue-200 dark:border-blue-900/40'
+        : isExpiredForCurrentUser
+            ? 'border-amber-200 dark:border-amber-900/40'
         : 'border-gray-100 dark:border-gray-800';
     const iconWrapperClass = isEnabledForCurrentUser
         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        : isExpiredForCurrentUser
+            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300'
         : 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-300';
-    const statusBadgeClass = isEnabledForCurrentUser
+    const statusBadgeClass = isExpiredForCurrentUser
+        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
+        : isEnabledForCurrentUser
         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
         : isBoundToAnotherUser
             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
@@ -205,6 +253,12 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                                 <span className="text-gray-500 dark:text-gray-400">
                                     激活时间：{formatActivationTime(accessState.activatedAt)}
                                 </span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    有效期至：{formatExpiryTime(accessState.expiresAt)}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    当前方案：{formatPlanLabel(accessState.planId)}
+                                </span>
                             </div>
 
                             <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -221,12 +275,12 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                             </div>
 
                             <div className="mt-4 flex flex-wrap items-center gap-3">
-                                {!isBoundToCurrentUser && (
+                                {(!isBoundToCurrentUser || isExpiredForCurrentUser) && (
                                     <button
                                         onClick={openPrompt}
                                         className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-all hover:scale-[1.02] hover:bg-blue-500 active:scale-95"
                                     >
-                                        输入兑换码
+                                        {isExpiredForCurrentUser ? '输入兑换码续期' : '输入兑换码'}
                                     </button>
                                 )}
                                 {isVerifiedForCurrentUser && !accessState.enabled && (

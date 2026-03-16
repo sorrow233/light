@@ -146,6 +146,10 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
                 let errorMsg = result.error || '上传失败';
                 if (errorMsg.includes('whitelist')) {
                     errorMsg = '没有上传权限';
+                } else if (errorMsg.includes('Upload membership expired')) {
+                    errorMsg = '上传会员已到期，请在设置里输入新的兑换码续期';
+                } else if (errorMsg.includes('already redeemed')) {
+                    errorMsg = '这个兑换码已经用过了，请换一个新的';
                 } else if (errorMsg.includes('Upload access token') || errorMsg.includes('membership')) {
                     errorMsg = '请先在设置中开启同步上传权限并输入兑换码';
                 } else if (errorMsg.includes('Unauthorized')) {

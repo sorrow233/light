@@ -1,8 +1,7 @@
-import { MEMBERSHIP_KEY_HASH_SET } from './_membershipKeyHashes.js';
-
 const FIREBASE_WEB_API_KEY = 'AIzaSyCrwCk7d5msWwhavu_kni8wpR07Km0GjIQ';
 const TOKEN_SCOPE = 'image_upload';
-const TOKEN_VERSION = 2;
+const LEGACY_TOKEN_VERSION = 2;
+const TOKEN_VERSION = 3;
 const textEncoder = new TextEncoder();
 
 function resolveTokenSecret(env) {
@@ -69,12 +68,6 @@ function fromBase64Url(value) {
     return binary;
 }
 
-async function sha256Hex(value) {
-    const data = typeof value === 'string' ? textEncoder.encode(value) : value;
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 async function hmacSha256Hex(secret, value) {
     const cryptoKey = await crypto.subtle.importKey(
         'raw',
@@ -119,20 +112,27 @@ export async function verifyFirebaseIdToken(idToken) {
     return userId;
 }
 
-export async function isValidMembershipKey(rawKey) {
-    const normalizedKey = normalizeValue(rawKey).toUpperCase();
-    if (!normalizedKey) return false;
+export async function issueImageAccessToken(userId, env, options = {}) {
+    const expiresAt = Number(options.expiresAt) || 0;
+    const activatedAt = Number(options.activatedAt) || 0;
+    const planId = normalizeValue(options.planId).toLowerCase();
+    const durationDays = Number(options.durationDays) || 0;
 
-    const keyHash = await sha256Hex(normalizedKey);
-    return MEMBERSHIP_KEY_HASH_SET.has(keyHash);
-}
+    if (!expiresAt || !activatedAt || !planId || !durationDays) {
+        const error = new Error('Missing membership token payload');
+        error.status = 500;
+        throw error;
+    }
 
-export async function issueImageAccessToken(userId, env) {
     const payload = {
         uid: normalizeValue(userId),
         scope: TOKEN_SCOPE,
         iat: Date.now(),
         version: TOKEN_VERSION,
+        exp: expiresAt,
+        activatedAt,
+        planId,
+        durationDays,
     };
 
     const encodedPayload = toBase64Url(JSON.stringify(payload));
@@ -155,11 +155,24 @@ export async function verifyImageAccessToken(token, env) {
 
     try {
         const payload = JSON.parse(fromBase64Url(encodedPayload));
-        if (
-            payload?.scope !== TOKEN_SCOPE
-            || payload?.version !== TOKEN_VERSION
-            || !normalizeValue(payload?.uid)
-        ) {
+        const version = Number(payload?.version);
+        if (payload?.scope !== TOKEN_SCOPE || !normalizeValue(payload?.uid)) {
+            return null;
+        }
+
+        if (version === TOKEN_VERSION) {
+            if (
+                !Number.isFinite(Number(payload?.exp))
+                || Number(payload.exp) <= 0
+                || !Number.isFinite(Number(payload?.activatedAt))
+                || Number(payload.activatedAt) <= 0
+                || !normalizeValue(payload?.planId)
+                || !Number.isFinite(Number(payload?.durationDays))
+                || Number(payload.durationDays) <= 0
+            ) {
+                return null;
+            }
+        } else if (version !== LEGACY_TOKEN_VERSION) {
             return null;
         }
 
@@ -211,10 +224,17 @@ export async function authorizeImageAccess(request, env) {
         };
     }
 
+    if (Number(payload.version) === TOKEN_VERSION && Number(payload.exp) <= Date.now()) {
+        return {
+            authorized: false,
+            reason: 'Unauthorized: Upload membership expired',
+        };
+    }
+
     return {
         authorized: true,
         userId: payload.uid,
-        mode: 'member_token',
+        mode: Number(payload.version) === TOKEN_VERSION ? 'membership_token' : 'legacy_member_token',
     };
 }
 

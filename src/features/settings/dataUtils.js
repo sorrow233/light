@@ -7,6 +7,8 @@ const SENSITIVE_USER_PREFERENCE_KEYS = new Set([
     'imageUploadAccessActivatedAt',
     'imageUploadAccessEnabled',
     'imageUploadAccessStateVersion',
+    'imageUploadAccessExpiresAt',
+    'imageUploadAccessPlanId',
 ]);
 
 const toYMap = (value) => {
