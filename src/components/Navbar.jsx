@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Spotlight from './shared/Spotlight';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ import SyncStatus from '../features/sync/SyncStatus';
 import { DataManagementModal } from '../features/settings';
 import { useTheme } from '../hooks/ThemeContext';
 import { useTranslation } from '../features/i18n';
+import { getRememberedInspirationRoute, rememberInspirationRoute } from '../utils/inspirationNavigation';
 
 const tabIcons = {
     inspiration: Lightbulb,
@@ -87,6 +88,20 @@ const Navbar = () => {
 
     const currentConfig = themeConfigs[activeTheme] || themeConfigs.default;
 
+    useEffect(() => {
+        if (!location.pathname.startsWith('/inspiration')) return;
+        rememberInspirationRoute(location.pathname);
+    }, [location.pathname]);
+
+    const handleTabNavigate = (tab) => {
+        if (tab.id === 'inspiration' && !location.pathname.startsWith('/inspiration')) {
+            navigate(getRememberedInspirationRoute());
+            return;
+        }
+
+        navigate(tab.path);
+    };
+
     return (
         <div className="relative z-50 flex w-full justify-center px-3 pb-3 pt-4 md:px-4 md:pb-4 md:pt-10">
             <nav className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-full shadow-sm max-w-[95vw] md:max-w-full relative mx-auto">
@@ -118,7 +133,7 @@ const Navbar = () => {
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => navigate(tab.path)}
+                                    onClick={() => handleTabNavigate(tab)}
                                     className={`
                                         relative flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full transition-all duration-300 whitespace-nowrap z-50 shrink-0
                                         hover:scale-105 active:scale-95
