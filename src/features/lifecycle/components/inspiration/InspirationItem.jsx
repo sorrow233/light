@@ -372,34 +372,6 @@ const InspirationItem = forwardRef(({
                             className={`w-2.5 h-2.5 rounded-full ${categoryConfig.dotColor} shadow-sm cursor-pointer transition-all duration-200 hover:scale-125 hover:ring-1 hover:ring-offset-1 hover:ring-pink-300/60 dark:hover:ring-pink-500/40 hover:ring-offset-white dark:hover:ring-offset-gray-900 ${isCompleted ? 'opacity-50' : ''}`}
                             title={t('inspiration.addNote', '添加随记')}
                         />
-                        {/* Note Edit Popover */}
-                        <AnimatePresence>
-                            {isEditingNote && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                                    className="absolute top-6 left-0 z-50 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-pink-200 dark:border-pink-800 p-2"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <input
-                                        ref={noteInputRef}
-                                        type="text"
-                                        value={noteDraft}
-                                        onChange={(e) => setNoteDraft(e.target.value)}
-                                        onKeyDown={handleNoteKeyDown}
-                                        onBlur={handleNoteSave}
-                                        placeholder={t('inspiration.notePlaceholder', '添加随记...')}
-                                        className="w-full px-2 py-1.5 text-sm bg-pink-50 dark:bg-pink-900/30 rounded border-none outline-none text-gray-700 dark:text-gray-200 placeholder:text-gray-400"
-                                    />
-                                    <div className="mt-1.5 text-[9px] text-gray-400 flex items-center gap-2">
-                                        <span>Enter {t('common.save', '保存')}</span>
-                                        <span>·</span>
-                                        <span>Esc {t('common.cancel', '取消')}</span>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -513,16 +485,43 @@ const InspirationItem = forwardRef(({
                 </AnimatePresence>
             </div>
 
-            {/* Note Display - Outside the Card */}
-            {
-                idea.note && (
-                    <div className="w-full md:w-[140px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-500">
-                        <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text`}>
-                            {idea.note}
-                        </p>
-                    </div>
-                )
-            }
+            {/* Note Display / Inline Editor */}
+            {(isEditingNote || idea.note) && (
+                <AnimatePresence initial={false}>
+                    <motion.div
+                        initial={{ opacity: 0, x: 12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 12 }}
+                        className="w-full md:w-[180px] pt-1 md:pt-4 pl-4 md:pl-0 flex-shrink-0"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {isEditingNote && !isArchiveView ? (
+                            <div className="rounded-xl border border-pink-200/80 bg-pink-50/85 p-3 shadow-sm dark:border-pink-800/80 dark:bg-pink-900/20">
+                                <input
+                                    ref={noteInputRef}
+                                    type="text"
+                                    value={noteDraft}
+                                    onChange={(e) => setNoteDraft(e.target.value)}
+                                    onKeyDown={handleNoteKeyDown}
+                                    onBlur={handleNoteSave}
+                                    placeholder={t('inspiration.notePlaceholder', '添加随记...')}
+                                    className="w-full bg-transparent text-[13px] font-medium leading-relaxed text-gray-700 outline-none placeholder:text-pink-300 dark:text-pink-100 dark:placeholder:text-pink-300/70"
+                                />
+                                <div className="mt-2 flex items-center gap-2 text-[9px] text-pink-400/80 dark:text-pink-200/70">
+                                    <span>Enter {t('common.save', '保存')}</span>
+                                    <span>·</span>
+                                    <span>Esc {t('common.cancel', '取消')}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className={`text-[12px] font-medium ${categoryConfig.textColor} opacity-80 dark:opacity-70 leading-relaxed italic break-words select-text`}>
+                                {idea.note}
+                            </p>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            )}
         </motion.div >
     );
 });
