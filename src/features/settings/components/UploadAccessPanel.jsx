@@ -23,34 +23,12 @@ const preferenceKeys = {
     stateVersion: 'imageUploadAccessStateVersion',
 };
 
-const formatActivationTime = (timestamp) => {
-    if (!timestamp) return '未激活';
-    return new Date(timestamp).toLocaleString('zh-CN');
-};
-
-const formatExpiryTime = (timestamp) => {
-    if (!timestamp) return '无限期';
-    return new Date(timestamp).toLocaleString('zh-CN');
-};
-
-const formatPlanLabel = (planId) => {
-    const normalized = String(planId || '').trim();
-    if (!normalized) return '未设置';
-    if (normalized === 'legacy_unlimited') return '旧版永久授权';
-
-    const match = normalized.match(/upload_(\d+)d/i);
-    if (match) {
-        return `${Number(match[1])} 天会员`;
+const formatExpiryTime = (timestamp, hasAuthorization) => {
+    if (!timestamp) {
+        return hasAuthorization ? '长期授权' : '未激活';
     }
 
-    return normalized;
-};
-
-const summarizeUserId = (value, fallback = '未登录') => {
-    const normalized = String(value || '').trim();
-    if (!normalized) return fallback;
-    if (normalized.length <= 20) return normalized;
-    return `${normalized.slice(0, 8)}...${normalized.slice(-6)}`;
+    return new Date(timestamp).toLocaleString('zh-CN');
 };
 
 const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
@@ -151,68 +129,32 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
         }
     }, [closePrompt, membershipKey, onSuccess, updatePreferenceState, user]);
 
-    const handleReset = useCallback(() => {
-        const nextState = {
-            enabled: false,
-            token: '',
-            ownerId: '',
-            activatedAt: 0,
-            expiresAt: 0,
-            planId: '',
-            stateVersion: UPLOAD_ACCESS_STATE_VERSION,
-        };
-
-        updatePreferenceState(nextState);
-        setMembershipKey('');
-        clearStoredUploadAccessState();
-        onSuccess?.('已清除当前账号的同步上传授权');
-    }, [onSuccess, updatePreferenceState]);
-
     const isBoundToCurrentUser = !!user?.uid && accessState.ownerId === user.uid;
     const isExpiredForCurrentUser = isBoundToCurrentUser && isUploadAccessExpired(accessState);
-    const isLegacyAuthorization = isBoundToCurrentUser && accessState.stateVersion === 2;
     const isEnabledForCurrentUser = accessState.enabled && isBoundToCurrentUser && !isExpiredForCurrentUser;
     const isVerifiedForCurrentUser = !!accessState.token && isBoundToCurrentUser && !isExpiredForCurrentUser;
-    const isBoundToAnotherUser = !!accessState.token && !!accessState.ownerId && !!user?.uid && accessState.ownerId !== user.uid;
-    const hasStoredAuthorization = !!(accessState.token || accessState.ownerId);
+    const hasAuthorization = !!accessState.token && !!accessState.ownerId;
     const statusLabel = isExpiredForCurrentUser
         ? '已过期'
         : isEnabledForCurrentUser
-        ? '已开启'
-        : isVerifiedForCurrentUser
-            ? '待开启'
-            : isLegacyAuthorization
-                ? '旧版授权'
-            : isBoundToAnotherUser
-                ? '已绑定其他账号'
+            ? '已开启'
+            : isVerifiedForCurrentUser
+                ? '已激活'
                 : '未激活';
-    const statusDescription = isExpiredForCurrentUser
-        ? '当前会员上传权限已经到期，需要输入新的兑换码续期。'
-        : isEnabledForCurrentUser
-        ? '当前账号已开启同步上传权限，可以直接上传图片。'
-        : isVerifiedForCurrentUser
-            ? '兑换码已绑定当前账号，打开右侧开关即可启用。'
-            : isLegacyAuthorization
-                ? '当前账号仍在使用旧版长期授权，续期后会切换到正式会员时效。'
-            : isBoundToAnotherUser
-                ? '当前设备已有其他账号的授权，输入兑换码可重新绑定当前账号。'
-                : '开启时会弹出兑换码输入框。新兑换码为一次性使用，并绑定当前账号。';
     const cardBorderClass = isEnabledForCurrentUser
         ? 'border-blue-200 dark:border-blue-900/40'
         : isExpiredForCurrentUser
             ? 'border-amber-200 dark:border-amber-900/40'
-        : 'border-gray-100 dark:border-gray-800';
+            : 'border-gray-100 dark:border-gray-800';
     const iconWrapperClass = isEnabledForCurrentUser
         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
         : isExpiredForCurrentUser
             ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300'
-        : 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-300';
+            : 'bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-300';
     const statusBadgeClass = isExpiredForCurrentUser
         ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
         : isEnabledForCurrentUser
-        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
-        : isBoundToAnotherUser
-            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
+            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
             : 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-200';
 
     return (
@@ -232,12 +174,12 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                                 <div className="min-w-0">
                                     <div className="font-medium text-gray-900 dark:text-white">同步上传权限</div>
                                     <div className="text-xs text-gray-400 mt-0.5">
-                                        {statusDescription}
+                                        用于开启灵感图片上传能力，激活后可在多端同步使用。
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleToggle}
-                                    className={`relative h-8 w-14 rounded-full transition-colors shrink-0 ${isEnabledForCurrentUser ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                    className={`relative h-8 w-14 rounded-full shrink-0 transition-colors ${isEnabledForCurrentUser ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'}`}
                                     title={isEnabledForCurrentUser ? '关闭同步上传权限' : '开启同步上传权限'}
                                 >
                                     <span
@@ -246,56 +188,13 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                                 </button>
                             </div>
 
-                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs">
                                 <span className={`inline-flex rounded-full px-3 py-1 font-medium ${statusBadgeClass}`}>
                                     {statusLabel}
                                 </span>
                                 <span className="text-gray-500 dark:text-gray-400">
-                                    激活时间：{formatActivationTime(accessState.activatedAt)}
+                                    有效至：{formatExpiryTime(accessState.expiresAt, hasAuthorization)}
                                 </span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                    有效期至：{formatExpiryTime(accessState.expiresAt)}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                    当前方案：{formatPlanLabel(accessState.planId)}
-                                </span>
-                            </div>
-
-                            <div className="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                    <span className="font-medium text-gray-700 dark:text-gray-200">当前登录</span>
-                                    <span className="break-all">{summarizeUserId(user?.uid)}</span>
-                                </div>
-                                {accessState.ownerId && (
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                        <span className="font-medium text-gray-700 dark:text-gray-200">授权绑定</span>
-                                        <span className="break-all">{summarizeUserId(accessState.ownerId, '尚未绑定')}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap items-center gap-3">
-                                {(!isBoundToCurrentUser || isExpiredForCurrentUser) && (
-                                    <button
-                                        onClick={openPrompt}
-                                        className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-all hover:scale-[1.02] hover:bg-blue-500 active:scale-95"
-                                    >
-                                        {isExpiredForCurrentUser ? '输入兑换码续期' : '输入兑换码'}
-                                    </button>
-                                )}
-                                {isVerifiedForCurrentUser && !accessState.enabled && (
-                                    <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-600 dark:border-blue-900/30 dark:bg-blue-900/10 dark:text-blue-300">
-                                        当前账号已验证，可直接打开开关。
-                                    </div>
-                                )}
-                                {hasStoredAuthorization && (
-                                    <button
-                                        onClick={handleReset}
-                                        className="text-sm text-gray-500 transition-colors hover:text-red-500"
-                                    >
-                                        清除授权
-                                    </button>
-                                )}
                             </div>
                         </div>
                     </div>
