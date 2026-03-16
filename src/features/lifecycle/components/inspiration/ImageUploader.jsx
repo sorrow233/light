@@ -25,6 +25,19 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
     const errorTimerRef = useRef(null);
     const successTimerRef = useRef(null);
 
+    const parseUploadResponse = useCallback(async (response) => {
+        const contentType = response.headers.get('content-type') || '';
+
+        if (contentType.includes('application/json')) {
+            return await response.json();
+        }
+
+        const text = await response.text();
+        return {
+            error: text?.slice(0, 200) || `请求失败 (${response.status})`
+        };
+    }, []);
+
     // 清理定时器
     useEffect(() => {
         return () => {
@@ -127,7 +140,7 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
                 body: formData
             });
 
-            const result = await response.json();
+            const result = await parseUploadResponse(response);
 
             if (!response.ok) {
                 // 友好化错误信息
@@ -154,7 +167,7 @@ const ImageUploaderInner = forwardRef(({ onUploadComplete, disabled = false }, r
         } finally {
             setIsUploading(false);
         }
-    }, [user, compressImage, onUploadComplete, showError, showSuccess]);
+    }, [user, compressImage, onUploadComplete, parseUploadResponse, showError, showSuccess]);
 
     /**
      * 从剪贴板数据中提取并上传图片
@@ -320,4 +333,3 @@ const ImageUploader = memo(ImageUploaderInner);
 ImageUploader.displayName = 'ImageUploader';
 
 export default ImageUploader;
-
