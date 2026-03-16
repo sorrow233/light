@@ -1,7 +1,5 @@
 import { MEMBERSHIP_KEY_HASH_SET } from './_membershipKeyHashes.js';
 
-const LEGACY_DURATION_DAYS = 365;
-const LEGACY_KEY_PATTERN = /^LIGHT-UPLOAD-[A-F0-9]{6}-[A-F0-9]{6}-[A-F0-9]{6}$/;
 const DURATION_KEY_PATTERN = /^LIGHT-UPLOAD-D(\d{3,4})-[A-F0-9]{6}-[A-F0-9]{6}-[A-F0-9]{6}$/;
 const textEncoder = new TextEncoder();
 
@@ -16,7 +14,7 @@ async function sha256Hex(value) {
 }
 
 function buildPlanRecord(durationDays, codeFormat) {
-    const safeDurationDays = Number.isInteger(durationDays) && durationDays > 0 ? durationDays : LEGACY_DURATION_DAYS;
+    const safeDurationDays = Number.isInteger(durationDays) && durationDays > 0 ? durationDays : 365;
 
     return {
         durationDays: safeDurationDays,
@@ -37,10 +35,6 @@ export function getMembershipPlanFromKey(rawKey) {
         }
 
         return null;
-    }
-
-    if (LEGACY_KEY_PATTERN.test(normalizedKey)) {
-        return buildPlanRecord(LEGACY_DURATION_DAYS, 'legacy_static');
     }
 
     return null;
