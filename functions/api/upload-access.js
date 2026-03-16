@@ -12,7 +12,7 @@ const corsHeaders = {
 };
 
 export async function onRequestPost(context) {
-    const { request } = context;
+    const { request, env } = context;
 
     try {
         const firebaseIdToken = getFirebaseIdTokenFromRequest(request);
@@ -36,7 +36,7 @@ export async function onRequestPost(context) {
             });
         }
 
-        const accessToken = await issueImageAccessToken(userId);
+        const accessToken = await issueImageAccessToken(userId, env);
         return new Response(JSON.stringify({
             success: true,
             token: accessToken,

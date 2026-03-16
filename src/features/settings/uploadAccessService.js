@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'light_image_upload_access';
+export const UPLOAD_ACCESS_STATE_VERSION = 2;
 
 function canUseStorage() {
     return typeof window !== 'undefined' && !!window.localStorage;
@@ -10,6 +11,20 @@ function toPositiveNumber(value) {
 }
 
 export function normalizeUploadAccessState(source = {}) {
+    const stateVersion = Number(
+        source.imageUploadAccessStateVersion ?? source.stateVersion ?? 0
+    );
+
+    if (stateVersion !== UPLOAD_ACCESS_STATE_VERSION) {
+        return {
+            enabled: false,
+            token: '',
+            ownerId: '',
+            activatedAt: 0,
+            stateVersion: UPLOAD_ACCESS_STATE_VERSION,
+        };
+    }
+
     return {
         enabled: source.imageUploadAccessEnabled === true || source.enabled === true,
         token: typeof source.imageUploadAccessToken === 'string'
@@ -25,6 +40,7 @@ export function normalizeUploadAccessState(source = {}) {
         activatedAt: toPositiveNumber(
             source.imageUploadAccessActivatedAt ?? source.activatedAt
         ),
+        stateVersion: UPLOAD_ACCESS_STATE_VERSION,
     };
 }
 

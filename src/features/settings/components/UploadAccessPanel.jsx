@@ -9,6 +9,7 @@ import {
     clearStoredUploadAccessState,
     normalizeUploadAccessState,
     persistUploadAccessState,
+    UPLOAD_ACCESS_STATE_VERSION,
 } from '../uploadAccessService';
 
 const preferenceKeys = {
@@ -16,6 +17,7 @@ const preferenceKeys = {
     token: 'imageUploadAccessToken',
     ownerId: 'imageUploadAccessOwnerId',
     activatedAt: 'imageUploadAccessActivatedAt',
+    stateVersion: 'imageUploadAccessStateVersion',
 };
 
 const formatActivationTime = (timestamp) => {
@@ -50,6 +52,7 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
         set(preferenceKeys.token, nextState.token);
         set(preferenceKeys.ownerId, nextState.ownerId);
         set(preferenceKeys.activatedAt, nextState.activatedAt);
+        set(preferenceKeys.stateVersion, nextState.stateVersion ?? UPLOAD_ACCESS_STATE_VERSION);
         persistUploadAccessState(nextState);
     }, [set]);
 
@@ -98,6 +101,7 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
                 token: activated.token,
                 ownerId: activated.userId,
                 activatedAt: activated.activatedAt,
+                stateVersion: UPLOAD_ACCESS_STATE_VERSION,
             };
 
             updatePreferenceState(nextState);
@@ -116,6 +120,7 @@ const UploadAccessPanel = ({ doc, onError, onSuccess }) => {
             token: '',
             ownerId: '',
             activatedAt: 0,
+            stateVersion: UPLOAD_ACCESS_STATE_VERSION,
         };
 
         updatePreferenceState(nextState);

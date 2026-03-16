@@ -1,9 +1,20 @@
 import { MEMBERSHIP_KEY_HASH_SET } from './_membershipKeyHashes.js';
 
 const FIREBASE_WEB_API_KEY = 'AIzaSyCrwCk7d5msWwhavu_kni8wpR07Km0GjIQ';
-const TOKEN_SECRET = '57f911cc6cfb5e36b5386740f51dffb235cc4d08a54e9109da428b3fa7c70e70';
 const TOKEN_SCOPE = 'image_upload';
+const TOKEN_VERSION = 2;
 const textEncoder = new TextEncoder();
+
+function resolveTokenSecret(env) {
+    const secret = normalizeValue(env?.IMAGE_ACCESS_TOKEN_SECRET);
+    if (!secret) {
+        const error = new Error('Missing IMAGE_ACCESS_TOKEN_SECRET');
+        error.status = 500;
+        throw error;
+    }
+
+    return secret;
+}
 
 function normalizeValue(value) {
     return String(value || '').trim();
@@ -116,20 +127,20 @@ export async function isValidMembershipKey(rawKey) {
     return MEMBERSHIP_KEY_HASH_SET.has(keyHash);
 }
 
-export async function issueImageAccessToken(userId) {
+export async function issueImageAccessToken(userId, env) {
     const payload = {
         uid: normalizeValue(userId),
         scope: TOKEN_SCOPE,
         iat: Date.now(),
-        version: 1,
+        version: TOKEN_VERSION,
     };
 
     const encodedPayload = toBase64Url(JSON.stringify(payload));
-    const signature = await hmacSha256Hex(TOKEN_SECRET, encodedPayload);
+    const signature = await hmacSha256Hex(resolveTokenSecret(env), encodedPayload);
     return `${encodedPayload}.${signature}`;
 }
 
-export async function verifyImageAccessToken(token) {
+export async function verifyImageAccessToken(token, env) {
     const normalizedToken = normalizeValue(token);
     const [encodedPayload, signature] = normalizedToken.split('.');
 
@@ -137,14 +148,18 @@ export async function verifyImageAccessToken(token) {
         return null;
     }
 
-    const expectedSignature = await hmacSha256Hex(TOKEN_SECRET, encodedPayload);
+    const expectedSignature = await hmacSha256Hex(resolveTokenSecret(env), encodedPayload);
     if (signature !== expectedSignature) {
         return null;
     }
 
     try {
         const payload = JSON.parse(fromBase64Url(encodedPayload));
-        if (payload?.scope !== TOKEN_SCOPE || !normalizeValue(payload?.uid)) {
+        if (
+            payload?.scope !== TOKEN_SCOPE
+            || payload?.version !== TOKEN_VERSION
+            || !normalizeValue(payload?.uid)
+        ) {
             return null;
         }
 
@@ -174,7 +189,7 @@ export async function authorizeImageAccess(request, env) {
         };
     }
 
-    const payload = await verifyImageAccessToken(accessToken);
+    const payload = await verifyImageAccessToken(accessToken, env);
     if (!payload) {
         return {
             authorized: false,
