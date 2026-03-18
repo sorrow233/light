@@ -152,33 +152,6 @@ const InspirationModule = () => {
         immediateSync?.();
     }, [updateProjectBase, immediateSync]);
 
-    // Filter for active ideas
-    const ideas = useMemo(() =>
-        allIdeas.filter((idea) => (idea.stage || 'inspiration') !== 'archive'),
-        [allIdeas]);
-
-    const handleImportedIdea = useCallback(({ text, timestamp, source, order = 0 }) => {
-        const newIdea = createImportedIdea({
-            text,
-            timestamp,
-            source,
-            colorIndex: getNextAutoColorIndex(ideas.length + order)
-        });
-
-        addIdea(newIdea);
-
-        if (shouldRevealImportedIdea(selectedCategory)) {
-            setSelectedCategory(DEFAULT_INSPIRATION_CATEGORY_ID);
-            toast.success('外部内容已导入到「笔记」分类');
-            return;
-        }
-
-        toast.success('外部内容已导入灵感箱');
-    }, [addIdea, ideas.length, selectedCategory]);
-
-    // 处理待导入队列（从外部项目发送的内容）
-    useImportQueue(user?.uid, handleImportedIdea, ready);
-
     const [input, setInput] = useState('');
     const [selectedColorIndex, setSelectedColorIndex] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
@@ -212,6 +185,34 @@ const InspirationModule = () => {
     const editorRef = useRef(null);
     const textareaRef = useRef(null); // Define textareaRef even if not used widely now
     const imageUploaderRef = useRef(null); // 图片上传组件引用
+
+    // Filter for active ideas
+    const ideas = useMemo(() =>
+        allIdeas.filter((idea) => (idea.stage || 'inspiration') !== 'archive'),
+        [allIdeas]);
+
+    const handleImportedIdea = useCallback(({ text, timestamp, source, order = 0 }) => {
+        const newIdea = createImportedIdea({
+            text,
+            timestamp,
+            source,
+            colorIndex: getNextAutoColorIndex(ideas.length + order)
+        });
+
+        addIdea(newIdea);
+
+        if (shouldRevealImportedIdea(selectedCategory)) {
+            setSelectedCategory(DEFAULT_INSPIRATION_CATEGORY_ID);
+            toast.success('外部内容已导入到「笔记」分类');
+            return;
+        }
+
+        toast.success('外部内容已导入灵感箱');
+    }, [addIdea, ideas.length, selectedCategory]);
+
+    // 处理待导入队列（从外部项目发送的内容）
+    useImportQueue(user?.uid, handleImportedIdea, ready);
+
     const selectedCategoryConfig = useMemo(() => {
         return categories.find((cat) => cat.id === selectedCategory)
             || categories[0]
