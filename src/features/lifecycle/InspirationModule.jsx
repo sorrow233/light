@@ -39,6 +39,8 @@ import {
 } from './components/inspiration/categoryRouteUtils';
 import {
     createImportedIdea,
+    resolveImportedCategory,
+    resolveImportedCategoryLabel,
     shouldRevealImportedIdea
 } from './utils/importedIdeaUtils';
 import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
@@ -192,23 +194,26 @@ const InspirationModule = () => {
         [allIdeas]);
 
     const handleImportedIdea = useCallback(({ text, timestamp, source, order = 0 }) => {
+        const importedCategoryId = resolveImportedCategory(categories);
+        const importedCategoryLabel = resolveImportedCategoryLabel(categories, importedCategoryId);
         const newIdea = createImportedIdea({
             text,
             timestamp,
             source,
-            colorIndex: getNextAutoColorIndex(ideas.length + order)
+            colorIndex: getNextAutoColorIndex(ideas.length + order),
+            categoryId: importedCategoryId
         });
 
         addIdea(newIdea);
 
-        if (shouldRevealImportedIdea(selectedCategory)) {
-            setSelectedCategory(DEFAULT_INSPIRATION_CATEGORY_ID);
-            toast.success('外部内容已导入到「笔记」分类');
+        if (shouldRevealImportedIdea(selectedCategory, importedCategoryId)) {
+            setSelectedCategory(importedCategoryId);
+            toast.success(`外部内容已导入到「${importedCategoryLabel}」分类`);
             return;
         }
 
         toast.success('外部内容已导入灵感箱');
-    }, [addIdea, ideas.length, selectedCategory]);
+    }, [addIdea, categories, ideas.length, selectedCategory]);
 
     // 处理待导入队列（从外部项目发送的内容）
     useImportQueue(user?.uid, handleImportedIdea, ready);
