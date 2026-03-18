@@ -15,6 +15,7 @@ export const useSyncStore = (docId, initialData = {}) => {
     const { user } = useAuth();
     const [status, setStatus] = useState('disconnected');
     const [pendingCount, setPendingCount] = useState(0);
+    const [ready, setReady] = useState(false);
     const [syncedDoc, setSyncedDoc] = useState(null);
 
     useEffect(() => {
@@ -39,6 +40,7 @@ export const useSyncStore = (docId, initialData = {}) => {
         const unsubscribe = engine.subscribe((state) => {
             setStatus(state.status);
             setPendingCount(state.pendingCount);
+            setReady(Boolean(state.ready));
         });
 
         return () => {
@@ -63,5 +65,5 @@ export const useSyncStore = (docId, initialData = {}) => {
         engine?.immediateSync();
     }, [docId]);
 
-    return { doc: syncedDoc, status, update, pendingCount, immediateSync };
+    return { doc: syncedDoc, status, ready, update, pendingCount, immediateSync };
 };

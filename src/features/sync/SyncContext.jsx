@@ -5,13 +5,13 @@ import { useLocalBackup } from './LocalBackupService';
 const SyncContext = createContext(null);
 
 export const SyncProvider = ({ children, docId = 'light_v1' }) => {
-    const { doc, status, update, immediateSync } = useSyncStore(docId);
+    const { doc, status, ready, update, immediateSync } = useSyncStore(docId);
 
     useDataMigration(doc);
     useLocalBackup(doc);
 
     return (
-        <SyncContext.Provider value={{ doc, status, update, immediateSync }}>
+        <SyncContext.Provider value={{ doc, status, ready, update, immediateSync }}>
             {children}
         </SyncContext.Provider>
     );

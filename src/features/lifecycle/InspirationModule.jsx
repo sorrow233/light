@@ -37,6 +37,10 @@ import {
     DEFAULT_INSPIRATION_CATEGORY_ID,
     resolveCategoryFallback,
 } from './components/inspiration/categoryRouteUtils';
+import {
+    createImportedIdea,
+    shouldRevealImportedIdea
+} from './utils/importedIdeaUtils';
 import { hexToRgba, resolveCategoryAccentHex } from './components/inspiration/categoryThemeUtils';
 import { useTheme } from '../../hooks/ThemeContext';
 
@@ -73,8 +77,7 @@ const InspirationModule = () => {
     const { user } = useAuth();
     const { isDark } = useTheme();
     // Sync - 使用 immediateSync 实现即时同步
-    const { doc, immediateSync, status } = useSync();
-    const isReady = status === 'synced';
+    const { doc, immediateSync, status, ready } = useSync();
 
     // Custom Categories
     const { categories: syncedCategories, addCategory, updateCategory, removeCategory } = useSyncedCategories(
@@ -154,8 +157,27 @@ const InspirationModule = () => {
         allIdeas.filter((idea) => (idea.stage || 'inspiration') !== 'archive'),
         [allIdeas]);
 
+    const handleImportedIdea = useCallback(({ text, timestamp, source, order = 0 }) => {
+        const newIdea = createImportedIdea({
+            text,
+            timestamp,
+            source,
+            colorIndex: getNextAutoColorIndex(ideas.length + order)
+        });
+
+        addIdea(newIdea);
+
+        if (shouldRevealImportedIdea(selectedCategory)) {
+            setSelectedCategory(DEFAULT_INSPIRATION_CATEGORY_ID);
+            toast.success('外部内容已导入到「笔记」分类');
+            return;
+        }
+
+        toast.success('外部内容已导入灵感箱');
+    }, [addIdea, ideas.length, selectedCategory]);
+
     // 处理待导入队列（从外部项目发送的内容）
-    useImportQueue(user?.uid, addIdea, ideas.length, getNextAutoColorIndex, isReady);
+    useImportQueue(user?.uid, handleImportedIdea, ready);
 
     const [input, setInput] = useState('');
     const [selectedColorIndex, setSelectedColorIndex] = useState(null);
@@ -356,21 +378,19 @@ const InspirationModule = () => {
 
         if (importText) {
             const decoded = decodeURIComponent(importText);
-            const newIdea = {
-                id: uuidv4(),
-                content: decoded,
+            handleImportedIdea({
+                text: decoded,
                 timestamp: Date.now(),
-                colorIndex: getNextAutoColorIndex(ideas.length),
-                stage: 'inspiration',
-            };
-            addIdea(newIdea);
+                source: 'external-share',
+                order: 0
+            });
 
             // 清理 URL 参数（避免刷新后重复创建）
             const url = new URL(window.location);
             url.searchParams.delete('import_text');
             window.history.replaceState({}, '', url);
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [handleImportedIdea]);
 
     // Keyboard shortcut: Cmd+Z to undo
     useEffect(() => {

@@ -533,7 +533,13 @@ export class SyncEngine {
         });
     }
 
-    getStatus() { return { status: this.status, pendingCount: this.pendingCount }; }
+    getStatus() {
+        return {
+            status: this.status,
+            pendingCount: this.pendingCount,
+            ready: this.isReady
+        };
+    }
 
     subscribe(cb) {
         this.listeners.add(cb);
