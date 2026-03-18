@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { collection, query, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,34 +14,46 @@ import { v4 as uuidv4 } from 'uuid';
  * @param {boolean} isReady - 同步引擎是否就绪
  */
 export const useImportQueue = (userId, addIdea, ideasCount, getNextColorIndex, isReady) => {
-    const processedRef = useRef(false);
+    const processingIdsRef = useRef(new Set());
+    const ideasCountRef = useRef(ideasCount);
+    const getNextColorIndexRef = useRef(getNextColorIndex);
 
     useEffect(() => {
-        console.debug('[ImportQueue] Checking queue for user:', userId, 'Ready:', isReady);
+        ideasCountRef.current = ideasCount;
+    }, [ideasCount]);
 
-        // userId 或 同步未准备好，等
-        if (!userId || !addIdea || !isReady || processedRef.current) {
+    useEffect(() => {
+        getNextColorIndexRef.current = getNextColorIndex;
+    }, [getNextColorIndex]);
+
+    useEffect(() => {
+        console.debug('[ImportQueue] Subscribing queue for user:', userId, 'Ready:', isReady);
+
+        if (!userId || !addIdea || !isReady) {
             if (!userId) console.debug('[ImportQueue] Skipping: No userId provided');
-            return;
+            return undefined;
         }
 
-        const processQueue = async () => {
+        const pendingRef = collection(db, `users/${userId}/pending_imports`);
+        const unsubscribe = onSnapshot(pendingRef, async (snapshot) => {
+            if (snapshot.empty) {
+                console.debug('[ImportQueue] No pending imports found.');
+                return;
+            }
+
+            const docsToProcess = snapshot.docs.filter((docSnap) => !processingIdsRef.current.has(docSnap.id));
+
+            if (docsToProcess.length === 0) {
+                return;
+            }
+
+            docsToProcess.forEach((docSnap) => processingIdsRef.current.add(docSnap.id));
+            console.info(`[ImportQueue] Found ${docsToProcess.length} pending imports! Processing...`);
+
             try {
-                const pendingRef = collection(db, `users/${userId}/pending_imports`);
-                const q = query(pendingRef);
-                const snapshot = await getDocs(q);
-
-                if (snapshot.empty) {
-                    console.debug('[ImportQueue] No pending imports found.');
-                    return;
-                }
-
-                console.info(`[ImportQueue] Found ${snapshot.size} pending imports! Processing...`);
-
                 let colorOffset = 0;
-                const deletePromises = [];
 
-                snapshot.forEach((docSnap) => {
+                await Promise.all(docsToProcess.map(async (docSnap) => {
                     const data = docSnap.data();
 
                     if (data.text) {
@@ -49,40 +61,41 @@ export const useImportQueue = (userId, addIdea, ideasCount, getNextColorIndex, i
                             id: uuidv4(),
                             content: data.text,
                             timestamp: data.createdAt || Date.now(),
-                            colorIndex: getNextColorIndex(ideasCount + colorOffset),
+                            colorIndex: getNextColorIndexRef.current(ideasCountRef.current + colorOffset),
                             stage: 'inspiration',
                             source: data.source || 'external',
-                            tags: data.source === 'nexmap' ? ['NexMap'] : ['API']  // 标记来源
+                            tags: data.source === 'nexmap' ? ['NexMap'] : ['API']
                         };
 
                         addIdea(newIdea);
                         colorOffset++;
-
                         console.log(`[ImportQueue] Created inspiration from ${data.source || 'external'}`);
                     }
 
-                    // 标记为已处理，删除文档
-                    deletePromises.push(
-                        deleteDoc(doc(db, `users/${userId}/pending_imports`, docSnap.id))
-                    );
-                });
+                    await deleteDoc(doc(db, `users/${userId}/pending_imports`, docSnap.id));
+                }));
 
-                // 等待所有删除完成
-                await Promise.all(deletePromises);
-                console.log(`[ImportQueue] Processed and cleaned ${snapshot.size} imports`);
-
+                console.log(`[ImportQueue] Processed and cleaned ${docsToProcess.length} imports`);
             } catch (error) {
-                // 权限错误时静默处理（用户可能未登录或安全规则未配置）
                 if (error.code === 'permission-denied') {
                     console.debug('[ImportQueue] No pending imports or permission denied');
                 } else {
                     console.error('[ImportQueue] Error processing queue:', error);
                 }
+            } finally {
+                docsToProcess.forEach((docSnap) => processingIdsRef.current.delete(docSnap.id));
             }
+        }, (error) => {
+            if (error.code === 'permission-denied') {
+                console.debug('[ImportQueue] Queue subscription denied');
+            } else {
+                console.error('[ImportQueue] Queue subscription error:', error);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+            processingIdsRef.current.clear();
         };
-
-        processedRef.current = true;
-        processQueue();
-
-    }, [userId, addIdea, ideasCount, getNextColorIndex, isReady]);
+    }, [userId, addIdea, isReady]);
 };
