@@ -12,11 +12,16 @@ import { db } from '../../../lib/firebase';
  */
 export const useImportQueue = (userId, onImport, isReady) => {
     const processingIdsRef = useRef(new Set());
+    const latestOnImportRef = useRef(onImport);
+
+    useEffect(() => {
+        latestOnImportRef.current = onImport;
+    }, [onImport]);
 
     useEffect(() => {
         console.debug('[ImportQueue] Subscribing queue for user:', userId, 'Ready:', isReady);
 
-        if (!userId || !onImport || !isReady) {
+        if (!userId || !latestOnImportRef.current || !isReady) {
             if (!userId) console.debug('[ImportQueue] Skipping: No userId provided');
             return undefined;
         }
@@ -42,9 +47,10 @@ export const useImportQueue = (userId, onImport, isReady) => {
 
                 await Promise.all(docsToProcess.map(async (docSnap) => {
                     const data = docSnap.data();
+                    const handleImport = latestOnImportRef.current;
 
-                    if (data.text) {
-                        onImport({
+                    if (data.text && handleImport) {
+                        handleImport({
                             text: data.text,
                             timestamp: data.createdAt || Date.now(),
                             source: data.source || 'external',
@@ -79,5 +85,5 @@ export const useImportQueue = (userId, onImport, isReady) => {
             unsubscribe();
             processingIdsRef.current.clear();
         };
-    }, [userId, onImport, isReady]);
+    }, [userId, isReady]);
 };
