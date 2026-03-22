@@ -17,6 +17,7 @@ import CategoryManager from './components/inspiration/CategoryManager';
 import InspirationCategorySelector from './components/inspiration/InspirationCategorySelector';
 import InspirationComposer from './components/inspiration/InspirationComposer';
 import AiTodoImportModal from './components/inspiration/AiTodoImportModal';
+import { extractVisibleProjectTags } from './components/inspiration/projectTagUtils';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import {
     buildCategoryExportText,
@@ -51,7 +52,6 @@ const getNextAutoColorIndex = (totalCount) => {
 
 const TODO_AI_CLASS_UNCLASSIFIED = 'unclassified';
 const TODO_AI_FILTER_PENDING = 'pending';
-const TAG_REGEX = /\[([^\]]+)\]/g;
 
 const TODO_AI_CLASS_OPTIONS = [
     { value: 'ai_done', label: 'AI 完成' },
@@ -339,12 +339,7 @@ const InspirationModule = () => {
 
         ideas.forEach((idea) => {
             const content = `${idea.content || ''}\n${idea.note || ''}`;
-            const matches = content.matchAll(TAG_REGEX);
-
-            for (const match of matches) {
-                const tag = String(match?.[1] || '').trim();
-                if (tag) tags.add(tag);
-            }
+            extractVisibleProjectTags(content).forEach((tag) => tags.add(tag));
         });
 
         return Array.from(tags).sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'));
