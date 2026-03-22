@@ -31,6 +31,7 @@ const MIN_PUSH_INTERVAL_MS = 30000;
 const MAX_RETRY_COUNT = 5;
 const INITIAL_RETRY_DELAY_MS = 5000;
 const MAX_RETRY_DELAY_MS = 120000; // 2分钟
+const IMMEDIATE_SYNC_DEBOUNCE_MS = 16;
 
 /**
  * SyncEngine v2 - 单文档同步版本
@@ -73,6 +74,9 @@ export class SyncEngine {
         this.isServerLoaded = false;
         this.unsubscribes = [];
         this.pushTimeout = null;
+        this.immediateSyncTimeout = null;
+        this.immediateSyncFrame = null;
+        this.pendingImmediateSync = false;
 
         // 版本控制
         this.localVersion = 0;
@@ -484,6 +488,13 @@ export class SyncEngine {
             }
         } finally {
             this.isPushing = false;
+
+            if (this.pendingImmediateSync) {
+                this.pendingImmediateSync = false;
+                if (this.isDirty) {
+                    this.immediateSync();
+                }
+            }
         }
     }
 
@@ -506,31 +517,56 @@ export class SyncEngine {
 
     getDoc() { return this.doc; }
 
+    clearImmediateSyncSchedule() {
+        if (this.immediateSyncTimeout !== null) {
+            clearTimeout(this.immediateSyncTimeout);
+            this.immediateSyncTimeout = null;
+        }
+
+        if (this.immediateSyncFrame !== null) {
+            cancelAnimationFrame(this.immediateSyncFrame);
+            this.immediateSyncFrame = null;
+        }
+    }
+
+    flushImmediateSync() {
+        if (!this.userId || !navigator.onLine || this.hasPermissionError) {
+            this.setStatus('offline');
+            return;
+        }
+
+        if (this.isPushing) {
+            this.pendingImmediateSync = true;
+            return;
+        }
+
+        // 取消已调度的防抖推送，优先使用这次合并后的即时推送
+        clearTimeout(this.pushTimeout);
+
+        // 如果 Y.js 有任何待推送的变更，强制标记为脏并立即推送一次
+        const state = Y.encodeStateAsUpdate(this.doc);
+        if (state.byteLength > 0) {
+            this.isDirty = true;
+            this.setStatus('syncing');
+            void this.tryPush();
+        }
+    }
+
     /**
      * 立即推送数据到云端（跳过防抖）
      * 用于需要即时同步的页面，如 Inspiration
-     * 使用 requestAnimationFrame 确保 Y.js 更新已完成
+     * 连续触发时会在一个很短的窗口内合并，只执行一次真正的编码与推送
      */
     immediateSync() {
-        // 使用 requestAnimationFrame 确保 DOM 和 Y.js 更新都已完成
-        requestAnimationFrame(() => {
-            // 强制设置为脏状态并推送
-            if (!this.userId || !navigator.onLine || this.hasPermissionError) {
-                this.setStatus('offline');
-                return;
-            }
+        this.clearImmediateSyncSchedule();
 
-            // 取消已调度的防抖推送
-            clearTimeout(this.pushTimeout);
-
-            // 如果 Y.js 有任何待推送的变更，强制标记为脏
-            const state = Y.encodeStateAsUpdate(this.doc);
-            if (state.byteLength > 0) {
-                this.isDirty = true;
-                this.setStatus('syncing');
-                this.tryPush();
-            }
-        });
+        this.immediateSyncTimeout = window.setTimeout(() => {
+            this.immediateSyncTimeout = null;
+            this.immediateSyncFrame = requestAnimationFrame(() => {
+                this.immediateSyncFrame = null;
+                this.flushImmediateSync();
+            });
+        }, IMMEDIATE_SYNC_DEBOUNCE_MS);
     }
 
     getStatus() {
@@ -556,6 +592,7 @@ export class SyncEngine {
         this.unsubscribes.forEach(fn => fn());
         this.localProvider?.destroy();
         clearTimeout(this.pushTimeout);
+        this.clearImmediateSyncSchedule();
         this.listeners.clear();
     }
 }
