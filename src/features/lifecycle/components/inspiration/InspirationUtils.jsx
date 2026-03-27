@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { INSPIRATION_CATEGORIES } from '../../../../utils/constants';
+import { buildCodeBlockTheme, trimCodeBlockFenceContent } from './codeBlockTheme';
 
 // Refined Color Configuration for "Crayon Highlighter" look
 export const COLOR_CONFIG = [
@@ -69,8 +70,9 @@ export const R2_IMAGE_REGEX = /(https:\/\/pub-[a-z0-9]+\.r2\.dev\/[^\s]+)/gi;
 const URL_REGEX = /(https?:\/\/[^\s]+)/gi;
 
 // Helper for parsing rich text (with image support)
-export const parseRichText = (text, clipboardText = '') => {
+export const parseRichText = (text, clipboardText = '', options = {}) => {
     if (!text) return null;
+    const codeBlockTheme = buildCodeBlockTheme(options.accentHex);
 
     // 合并两种正则的匹配结果并去重
     const matches1 = text.match(IMAGE_URL_REGEX) || [];
@@ -84,7 +86,7 @@ export const parseRichText = (text, clipboardText = '') => {
     });
     textWithoutImages = textWithoutImages.trim();
 
-    const parts = textWithoutImages.split(/(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]|#![^:]+:[^#]+#)/g);
+    const parts = textWithoutImages.split(/(```[\s\S]*?```|`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]|#![^:]+:[^#]+#)/g);
 
     const renderTextWithLinks = (part, index) => {
         const segments = part.split(URL_REGEX);
@@ -142,6 +144,20 @@ export const parseRichText = (text, clipboardText = '') => {
     };
 
     const textElements = parts.map((part, index) => {
+        if (part.startsWith('```') && part.endsWith('```')) {
+            const content = trimCodeBlockFenceContent(part);
+            return (
+                <div key={index} className="my-3 text-[14px] font-medium leading-[2] whitespace-pre-wrap">
+                    <span
+                        className="box-decoration-clone rounded-[0.95rem] border px-3 py-1.5 font-mono"
+                        style={codeBlockTheme.renderedBlockStyle}
+                    >
+                        {content}
+                    </span>
+                </div>
+            );
+        }
+
         if (part.startsWith('#!') && part.endsWith('#')) {
             const match = part.match(/#!([^:]+):([^#]+)#/);
             if (match) {

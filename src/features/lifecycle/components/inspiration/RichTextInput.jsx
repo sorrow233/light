@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { COLOR_CONFIG } from './InspirationUtils';
 import { htmlToMarkup, markupToHtml, mergeMarkupWithPlainTextLineBreaks } from './richTextMarkup';
+import { buildCodeBlockTheme } from './codeBlockTheme';
 
 /**
  * 富文本输入框组件 - 使用 contenteditable 实现真正的富文本编辑
@@ -14,10 +15,29 @@ const RichTextInput = forwardRef(({
     placeholder,
     className,
     style,
+    accentHex,
 }, ref) => {
     const editorRef = useRef(null);
     const isComposing = useRef(false);
     const lastSelectionRef = useRef(null);
+    const codeBlockTheme = buildCodeBlockTheme(accentHex);
+
+    const focusSelectionAfterNode = useCallback((node) => {
+        const selection = window.getSelection();
+        if (!selection) return;
+
+        const range = document.createRange();
+        if (node?.parentNode) {
+            range.setStartAfter(node);
+        } else if (editorRef.current) {
+            range.selectNodeContents(editorRef.current);
+        }
+        range.collapse(true);
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+        lastSelectionRef.current = range.cloneRange();
+    }, []);
 
     const captureSelection = useCallback(() => {
         const selection = window.getSelection();
@@ -119,6 +139,61 @@ const RichTextInput = forwardRef(({
                 return false;
             }
         },
+        applyCodeBlock: () => {
+            const sel = window.getSelection();
+            let range = null;
+
+            if (sel?.rangeCount) {
+                const liveRange = sel.getRangeAt(0);
+                if (editorRef.current?.contains(liveRange.commonAncestorContainer)) {
+                    range = liveRange;
+                }
+            }
+
+            if (!range && lastSelectionRef.current) {
+                range = lastSelectionRef.current.cloneRange();
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+
+            if (!range || !editorRef.current?.contains(range.commonAncestorContainer)) return false;
+
+            let parentCodeBlock = null;
+            let node = range.commonAncestorContainer;
+            while (node && node !== editorRef.current) {
+                if (node.nodeType === Node.ELEMENT_NODE && node.classList?.contains('code-block-card')) {
+                    parentCodeBlock = node;
+                    break;
+                }
+                node = node.parentNode;
+            }
+
+            if (parentCodeBlock) {
+                return unwrapCodeBlock(parentCodeBlock);
+            }
+
+            if (range.isCollapsed) return false;
+
+            const codeBlock = document.createElement('div');
+            codeBlock.className = 'code-block-card';
+            Object.assign(codeBlock.style, codeBlockTheme.editorBlockStyle);
+
+            try {
+                const fragment = range.extractContents();
+                if (!fragment.textContent?.trim()) return false;
+
+                codeBlock.appendChild(fragment);
+                range.insertNode(codeBlock);
+                focusSelectionAfterNode(codeBlock);
+                handleInput();
+                return true;
+            } catch (e) {
+                console.warn('Code block apply failed:', e);
+                return false;
+            }
+        },
         // 清空内容
         clear: () => {
             if (editorRef.current) {
@@ -137,23 +212,31 @@ const RichTextInput = forwardRef(({
         onChange?.(markup);
     }, [htmlToMarkup, onChange]);
 
+    const unwrapCodeBlock = useCallback((codeBlockNode) => {
+        if (!codeBlockNode?.parentNode) return false;
+
+        const fragment = document.createDocumentFragment();
+        const childNodes = Array.from(codeBlockNode.childNodes);
+        childNodes.forEach((node) => fragment.appendChild(node));
+
+        const lastChild = childNodes[childNodes.length - 1] || null;
+        codeBlockNode.parentNode.replaceChild(fragment, codeBlockNode);
+        focusSelectionAfterNode(lastChild);
+        handleInput();
+        return true;
+    }, [focusSelectionAfterNode, handleInput]);
+
     // 同步外部 value 到编辑器
     useEffect(() => {
         if (!editorRef.current) return;
 
-        // 获取当前光标位置
-        const sel = window.getSelection();
-        const currentPosition = sel.rangeCount > 0 ? {
-            node: sel.anchorNode,
-            offset: sel.anchorOffset
-        } : null;
-
         // 比较当前内容与新值
         const currentMarkup = htmlToMarkup(editorRef.current);
-        if (currentMarkup !== value) {
-            editorRef.current.innerHTML = markupToHtml(value || '');
+        const nextHtml = markupToHtml(value || '', { accentHex });
+        if (currentMarkup !== value || editorRef.current.innerHTML !== nextHtml) {
+            editorRef.current.innerHTML = nextHtml;
         }
-    }, [value, htmlToMarkup, markupToHtml]);
+    }, [accentHex, value]);
 
     useEffect(() => {
         const handleSelectionChange = () => {
@@ -175,7 +258,7 @@ const RichTextInput = forwardRef(({
             const markup = htmlToMarkup(tempContainer);
             const plainText = e.clipboardData.getData('text/plain');
             const mergedMarkup = mergeMarkupWithPlainTextLineBreaks(markup, plainText);
-            document.execCommand('insertHTML', false, markupToHtml(mergedMarkup));
+            document.execCommand('insertHTML', false, markupToHtml(mergedMarkup, { accentHex }));
             requestAnimationFrame(handleInput);
             return;
         }
@@ -183,12 +266,12 @@ const RichTextInput = forwardRef(({
         const text = e.clipboardData.getData('text/plain');
         // 如果包含标记，则通过 markupToHtml 转换并插入 HTML
         if (text.includes('#!') || text.includes('**') || text.includes('\n')) {
-            document.execCommand('insertHTML', false, markupToHtml(text));
+            document.execCommand('insertHTML', false, markupToHtml(text, { accentHex }));
             requestAnimationFrame(handleInput);
         } else {
             document.execCommand('insertText', false, text);
         }
-    }, [handleInput]);
+    }, [accentHex, handleInput]);
 
     // 处理按键
     const handleKeyDownInternal = useCallback((e) => {

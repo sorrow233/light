@@ -13,6 +13,7 @@ const normalizeMatchToken = (value = '') => {
 
 export const normalizeIdeaTextForExport = (content = '') => {
     return String(content)
+        .replace(/```([\s\S]*?)```/g, '$1')
         .replace(/#![^:]+:([^#]+)#/g, '$1')
         .replace(/`([^`]+)`/g, '$1')
         .replace(/\*\*([^*]+)\*\*/g, '$1')

@@ -6,8 +6,9 @@ import Spotlight from '../../../../components/shared/Spotlight';
 import RichTextInput from './RichTextInput';
 import ImageUploader from './ImageUploader';
 import { COLOR_CONFIG } from './InspirationUtils';
+import CodeBlockActionButton from './CodeBlockActionButton';
 
-const InspirationComposer = ({ allProjectTags = [], onSubmit }) => {
+const InspirationComposer = ({ allProjectTags = [], onSubmit, accentHex }) => {
     const { t } = useTranslation();
     const { isDark } = useTheme();
     const [input, setInput] = useState('');
@@ -88,6 +89,7 @@ const InspirationComposer = ({ allProjectTags = [], onSubmit }) => {
                         value={input}
                         onChange={setInput}
                         onKeyDown={handleKeyDown}
+                        accentHex={accentHex}
                         placeholder={t('inspiration.placeholder')}
                         className="w-full bg-transparent text-lg text-gray-800 dark:text-gray-100 outline-none p-6 pb-20 min-h-[200px] font-light leading-relaxed relative z-10 break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400/50"
                         style={{
@@ -113,6 +115,18 @@ const InspirationComposer = ({ allProjectTags = [], onSubmit }) => {
                                         title={conf.id}
                                     />
                                 ))}
+
+                                <CodeBlockActionButton
+                                    accentHex={accentHex}
+                                    onClick={() => {
+                                        const applied = editorRef.current?.applyCodeBlock();
+                                        if (!applied) {
+                                            editorRef.current?.focus();
+                                        }
+                                    }}
+                                    title={t('inspiration.codeBlockAction', '将选中文本包成代码块')}
+                                    className="h-7 px-2.5 py-0"
+                                />
                             </div>
 
                             <ImageUploader

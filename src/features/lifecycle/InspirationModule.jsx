@@ -1282,6 +1282,7 @@ ${unclassifiedTodoNumberedText || '暂无未分类待办'}
                     <InspirationComposer
                         allProjectTags={allProjectTags}
                         onSubmit={handleAdd}
+                        accentHex={selectedCategoryAccentHex}
                     />
 
                     {/* Category Selector - Redesigned: Capsule with Name & Dots */}
