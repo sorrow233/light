@@ -22,6 +22,14 @@ const RichTextInput = forwardRef(({
     const lastSelectionRef = useRef(null);
     const codeBlockTheme = buildCodeBlockTheme(accentHex);
 
+    const applyCodeBlockThemeToEditor = useCallback(() => {
+        if (!editorRef.current) return;
+
+        editorRef.current.querySelectorAll('.code-block-card').forEach((node) => {
+            Object.assign(node.style, codeBlockTheme.editorBlockStyle);
+        });
+    }, [codeBlockTheme.editorBlockStyle]);
+
     const focusSelectionAfterNode = useCallback((node) => {
         const selection = window.getSelection();
         if (!selection) return;
@@ -232,11 +240,15 @@ const RichTextInput = forwardRef(({
 
         // 比较当前内容与新值
         const currentMarkup = htmlToMarkup(editorRef.current);
-        const nextHtml = markupToHtml(value || '', { accentHex });
-        if (currentMarkup !== value || editorRef.current.innerHTML !== nextHtml) {
-            editorRef.current.innerHTML = nextHtml;
+        const nextMarkup = value || '';
+        if (currentMarkup !== nextMarkup) {
+            editorRef.current.innerHTML = markupToHtml(nextMarkup, { accentHex });
+            return;
         }
-    }, [accentHex, value]);
+
+        // 仅在分类颜色变化时刷新代码块样式，避免输入过程中重建 DOM 打断光标。
+        applyCodeBlockThemeToEditor();
+    }, [accentHex, applyCodeBlockThemeToEditor, value]);
 
     useEffect(() => {
         const handleSelectionChange = () => {
